@@ -70,23 +70,26 @@ def load_subset_modis_annual(catchment, output_dem, year_to_take, modis_folder, 
     :return: trimmed_fsca, modis_dt, trimmed_mask. The data, datetimes and catchment mask
     """
     # load a file
-    nc_file = nc.Dataset(modis_folder + '/DSC_MOD10A1_{}_v0_nosparse_interp.nc'.format(year_to_take))
+    nc_file = nc.Dataset(modis_folder + '/DSC_MOD10A1_{}_v0_nosparse_interp001.nc'.format(year_to_take))
     ndsi = nc_file.variables['NDSI_Snow_Cover_Cloudfree'][:]  # .astype('float32')  # nsdi in %
 
     # trim to only the catchment desired
-    mask, trimmed_mask = load_mask_modis(catchment, output_dem, mask_folder, dem_folder, modis_dem)
-
+    if mask_folder is not None:
+        mask, trimmed_mask = load_mask_modis(catchment, None, mask_folder, None, modis_dem)
+    else: # if no catchment specified, just mask to the valid data points.
+        mask = np.ones(ndsi.shape[1:])
+        trimmed_mask = mask
     # trimmed_fsca = trim_data_bounds(mask, lat_array, lon_array, fsca[183].copy(), y_centres, x_centres)
     trimmed_ndsi = trim_data_to_mask(ndsi, mask)
     trimmed_ndsi = trimmed_ndsi.astype(np.float32, copy=False)
     trimmed_fsca = -1 + 1.45 * trimmed_ndsi  # convert to snow cover fraction in % (as per Modis collection 5)
-    trimmed_fsca[trimmed_ndsi > 100] = np.nan  # set all points with inland water or ocean(237 or 239) to -999, then convert to nan once trimmed
+    trimmed_fsca[trimmed_ndsi > 100] = np.nan  # set all points with inland water or ocean(237 or 239) to nan
     trimmed_fsca[trimmed_fsca > 100] = 100  # limit fsca to 100%
     trimmed_fsca[trimmed_fsca < 0] = 0  # limit fsca to 0
 
     # read date and convert into hydrological year
     modis_dt = nc.num2date(nc_file.variables['time'][:], nc_file.variables['time'].units)
-    # mask out values outside of catchment and reset water values to np.nan
+    # mask out values outside of catchment
     trimmed_fsca[:, trimmed_mask == 0] = np.nan
 
     return trimmed_fsca, modis_dt, trimmed_mask
@@ -224,7 +227,7 @@ if __name__ == '__main__':
             st_sc = None
             st_snow = None
 
-        if which_model == 'dsc_snow' or which_model == 'all':
+        if which_model == 'dsc_snow':
             print('loading dsc_snow model data {}'.format(year_to_take))
 
             if dsc_snow_opt == 'fortran':

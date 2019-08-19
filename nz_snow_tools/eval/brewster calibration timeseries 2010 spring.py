@@ -33,7 +33,7 @@ config['a_ice'] = 0.42
 config['a_freshsnow'] = 0.90
 config['a_firn'] = 0.62
 config['alb_swe_thres'] = 10
-config['ros'] = False
+config['ros'] = True
 
 # load brewster glacier data
 inp_dat = np.genfromtxt(
@@ -103,7 +103,7 @@ plt.xlabel('month')
 plt.ylabel('SWE mm w.e.')
 plt.legend()
 plt.title('cumulated mass balance TF:{}, RF: {}, Tmelt:{}'.format(config['tf'],config['rf'],config['tmelt']))
-plt.savefig('P:/Projects/DSC-Snow/nz_snow_runs/brewster calibration/rain_on_snow/spring 2010 TF{}RF{}Tmelt{}.png'.format(config['tf'],config['rf'],config['tmelt']))
+plt.savefig('P:/Projects/DSC-Snow/nz_snow_runs/brewster calibration/rain_on_snow/spring 2010 TF{}RF{}Tmelt{}_ros2.png'.format(config['tf'],config['rf'],config['tmelt']))
 
 plt.figure()
 # show daily change in SWE
@@ -129,7 +129,7 @@ plt.ylabel('model melt')
 plt.xlabel('surface height * -492 kg m^3')
 
 plt.title('daily melt rate TF:{}, RF: {}, Tmelt:{}'.format(config['tf'],config['rf'],config['tmelt']))
-plt.savefig('P:/Projects/DSC-Snow/nz_snow_runs/brewster calibration/rain_on_snow/spring 2010 daily TF{}RF{}Tmelt{}.png'.format(config['tf'],config['rf'],config['tmelt']))
+plt.savefig('P:/Projects/DSC-Snow/nz_snow_runs/brewster calibration/rain_on_snow/spring 2010 daily TF{}RF{}Tmelt{}_ros2.png'.format(config['tf'],config['rf'],config['tmelt']))
 #plt.show()
 
 plt.close()

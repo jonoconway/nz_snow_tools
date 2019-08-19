@@ -12,8 +12,12 @@ import datetime as dt
 import netCDF4 as nc
 import numpy as np
 import pickle
-import mpl_toolkits.basemap as basemap
 
+import os  # need to import this as basemap is a bit broken https://github.com/conda-forge/basemap-feedstock/issues/30
+
+os.environ['PROJ_LIB'] = r'C:\miniconda\envs\nz_snow27\Library\share'
+import mpl_toolkits.basemap as basemap
+from scipy import interpolate
 from nz_snow_tools.util.utils import process_precip, process_temp, create_mask_from_shpfile, make_regular_timeseries, calc_toa, trim_lat_lon_bounds, \
     setup_nztm_dem
 
@@ -75,6 +79,9 @@ def interpolate_met(in_dat, var, in_lons, in_lats, in_elev, out_lons, out_lats, 
 
     Air temperatures are first lapsed to sea level using default lapse rate of 0.005 K per m, interpolated, then lapsed to elevation of new grid
 
+    when the input is a masked array, nearest neighbour interpolation is used to fill the gaps iaround the edge of the input data mask and the output data mask.
+     If no mask is set on the elevation data, a mask at sea-level will be created.
+
     :param in_dat: 3D array with data to be interpolated. has matrix [i,j] coordinates i.e. dimensions [time, in_lats, in_lons]
     :param var: name of variable to be interpolated. if 't_max', or 't_min'  will lapse to sea level before interpolation
     :param in_lons: 1D or 2D array containing longitudes of input data
@@ -116,10 +123,26 @@ def interpolate_met(in_dat, var, in_lons, in_lats, in_elev, out_lons, out_lats, 
 
             out_dat1 = basemap.interp(in_dat1, in_lons, in_lats, XI, YI, checkbounds=False, masked=False, order=1)  # bilinear grid - will miss edges
             if type(in_dat) == np.ma.core.MaskedArray:
-                out_dat0 = basemap.interp(in_dat1, in_lons, in_lats, XI, YI, checkbounds=False, masked=False, order=0)  # nearest neighbour grid to fill edges
-                out_dat1[np.where(out_dat1.mask)] = out_dat0[np.where(out_dat1.mask)]  # replace the masked elements in bilinear grid with the nn grid
-            # mask data at sea level
-            # out_dat1[out_elev.data < 1.0] = np.nan # no longer send in a masked array
+                if type(out_elev) == np.ma.core.MaskedArray:
+                    elev_mask = out_elev.mask
+                else:
+                    elev_mask = out_elev == 0  # mask out areas less than 1 m above sea level
+
+                # first extrapolate around the edges of the grid
+                array = np.ma.masked_invalid(in_dat1)
+                xx, yy = np.meshgrid(in_lons, in_lats)
+                # get only the valid values
+                x1 = xx[~array.mask]
+                y1 = yy[~array.mask]
+                newarr = array[~array.mask]
+                GD1 = interpolate.griddata((x1, y1), newarr.ravel(), (xx, yy), method='nearest')
+                GD1 = np.ma.masked_invalid(GD1)
+                out_dat0 = basemap.interp(GD1, in_lons, in_lats, XI, YI, checkbounds=False, masked=False, order=0)  # nearest neighbour grid to fill edges
+                ind = np.logical_and(out_dat1.mask, elev_mask == False)  # select areas without data in bilinear grid and above sea level
+                out_dat1[ind] = out_dat0[ind]  # use nearest neighbour grid to fill grid with elev mask to set limits
+                out_dat1[elev_mask] = np.nan
+                # out_dat0 = basemap.interp(in_dat1, in_lons, in_lats, XI, YI, checkbounds=False, masked=False, order=0)  # nearest neighbour grid to fill edges
+                # out_dat1[np.where(out_dat1.mask)] = out_dat0[np.where(out_dat1.mask)]  # replace the masked elements in bilinear grid with the nn grid
 
             if var in ['tmax', 'tmin']:  # lapse back to new elevations
                 out_t_offset = out_elev * lapse
@@ -244,37 +267,38 @@ if __name__ == '__main__':
     # dem control
     origin = 'topleft'  # orientation of output dem options are 'topleft' or 'bottomleft'. assume that input Dem is 'topleft'
     output_dem = 'nztm250m'  # identifier for output dem
-    dem_file = 'Z:/GIS_DATA/Topography/DEM_NZSOS/clutha_dem_250m.tif'
+    dem_file = 'C:/Users/conwayjp/OneDrive - NIWA/Data/GIS_DATA/Topography/DEM_NZSOS/si_dem_250m.tif'
     # mask control
-    mask_dem = True  # boolean to set whether or not to mask the output dem - assume mask is bottom left
-    catchment = 'Clutha'
+    mask_dem = False  # boolean to set whether or not to mask the output dem - assume mask is bottom left
+    catchment = 'SI_DEM'
     mask_created = True  # boolean to set whether or not the mask has already been created - assume mask is bottom left
     mask_folder = 'T:/DSC-Snow/Masks'  # location of numpy catchment mask. must be writeable if mask_created == False
     mask_shpfile = 'Z:/GIS_DATA/Hydrology/Catchments/{}.shp'.format(
         catchment)  # shapefile containing polyline or polygon of catchment in WGS84. Not needed if mask_created==True
     # time control
     hydro_years = False  # use hydrolgical years (april 1 to March 31)?
-    hydro_years_to_take = range(2000, 2016 + 1)  # range(2001, 2013 + 1)
+    hydro_years_to_take = range(2000, 2000 + 1)  # range(2001, 2013 + 1)
     save_by_timestep = False  # save one timestep per file? Needed for Fortran version of dsc_snow, only works with compute_by_day==False
     compute_by_day = True  # only compute hourly values one day at a time? Useful for large grids, as not enough memory to compute for whole grid at once.
-    ta_version = 'vcsn'  # options for temperature vcsn and norton
+    ta_version = 'norton'  # options for temperature vcsn and norton
     # input met data
-    nc_file_rain = 'Z:/newVCSN/rain_vclim_clidb_1972010100_2017102000_south-island_p05_daily.nc'
+    nc_file_rain = 'C:/Users/conwayjp/OneDrive - NIWA/Data/newVCSN/rain_vclim_clidb_1972010100_2017102000_south-island_p05_daily.nc'
     if ta_version == 'norton':
-        nc_file_tmax = 'Z:/newVCSN/tmax_N2_1980010100_2017073100_south-island_p05_daily.nc'
-        nc_file_tmin = 'Z:/newVCSN/tmin_N2_1980010100_2017073100_south-island_p05_daily.nc'
+        nc_file_tmax = 'C:/Users/conwayjp/OneDrive - NIWA/Data/newVCSN/tmax_N2_1980010100_2017073100_south-island_p05_daily.nc'
+        nc_file_tmin = 'C:/Users/conwayjp/OneDrive - NIWA/Data/newVCSN/tmin_N2_1980010100_2017073100_south-island_p05_daily.nc'
     elif ta_version == 'vcsn':
         nc_file_tmax = 'Z:/newVCSN/tmax_vclim_clidb_1972010100_2017102000_south-island_p05_daily.nc'
         nc_file_tmin = 'Z:/newVCSN/tmin_vclim_clidb_1972010100_2017102000_south-island_p05_daily.nc'
-    nc_file_srad = 'Z:/newVCSN/srad_vclim_clidb_1972010100_2017102000_south-island_p05_daily.nc'
+    nc_file_srad = 'C:/Users/conwayjp/OneDrive - NIWA/Data/newVCSN/srad_vclim_clidb_1972010100_2017102000_south-island_p05_daily.nc'
     # output met data
-    met_out_folder = 'T:/DSC-Snow/input_data_hourly'
+    met_out_folder = 'C:/Users/conwayjp/Documents/test3'
 
     ####
 
     # set up input and output DEM for processing
     # output DEM
-    nztm_dem, x_centres, y_centres, lat_array, lon_array = setup_nztm_dem(dem_file, origin=origin)
+    nztm_dem, x_centres, y_centres, lat_array, lon_array = setup_nztm_dem(dem_file, origin=origin, extent_w=1.08e6, extent_e=1.72e6, extent_n=5.52e6,
+                                                                          extent_s=4.82e6, resolution=250)
     data_id = '{}_{}'.format(catchment, output_dem)  # name to identify the output data
     if mask_dem == True:
         # Get the masks for the individual regions of interest
@@ -318,7 +342,7 @@ if __name__ == '__main__':
         # load grid (assume same for all input data)
         ds = nc.Dataset(nc_file_rain)
         vcsn_elev = np.flipud(ds.variables['elevation'][:])
-        vcsn_lats = ds.variables['latitude'][::-1]
+        vcsn_lats = np.flip(ds.variables['latitude'])
         vcsn_lons = ds.variables['longitude'][:]
         hy_index = np.ones(dts_to_take.shape, dtype='int')
 

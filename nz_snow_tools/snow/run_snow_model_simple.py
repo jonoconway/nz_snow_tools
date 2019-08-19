@@ -33,10 +33,13 @@ config['a_ice'] = 0.42
 config['a_freshsnow'] = 0.95
 config['a_firn'] = 0.62
 config['alb_swe_thres'] = 20
+config['ros'] = True # include rain on snow
+config['ta_m_tt'] = False # use melt threshold for calculating magnitude of temperature dependent melt (default is False = use 273.15).
+
 
 # load brewster glacier data
 inp_dat = np.genfromtxt(
-    'S:\Scratch\Jono\Final Brewster Datasets\updated_met_data\BrewsterGlacier_Oct10_Sep12_mod3.dat')
+    'C:/Users/conwayjp/OneDrive - NIWA/projects/DSC Hydro/BrewsterGlacier_Oct10_Sep12_mod3.dat')
 start_t = 9600 -1# 9456 = start of doy 130 10th May 2011 9600 = end of 13th May,18432 = start of 11th Nov 2013,19296 = 1st december 2011
 end_t = 21360  # 20783 = end of doy 365, 21264 = end of 10th January 2012, 21360 = end of 12th Jan
 inp_dt = make_regular_timeseries(dt.datetime(2010,10,25,00,30),dt.datetime(2012,9,2,00,00),1800)
@@ -54,13 +57,13 @@ inp_sfc -= inp_sfc[0]# reset to 0 at beginning of period
 
 # validation data
 seb_dat = np.genfromtxt(
-    'S:\Scratch\Jono\Final Brewster Datasets\SEB_output\cdf - code2p0_MC_meas_noQPS_single_fixed output_fixed_B\modelOUT_br1_headings.txt',skip_header=3)
+    'C:/Users/conwayjp/OneDrive - NIWA/projects/DSC Hydro/modelOUT_br1_headings.txt',skip_header=3)
 seb_mb = seb_dat[start_t-1:end_t, -1]
 seb_mb -= seb_mb[0] # reset to 0
 
 # read in measured daily SEB change
 mb_dat = np.genfromtxt(
-    r'S:\Scratch\Jono\Final Brewster Datasets\mass_balance_validation\5 MB scatters\mchange.dat')
+    'C:/Users/conwayjp/OneDrive - NIWA/projects/DSC Hydro/mchange.dat')
 # note that the measured MB interprets surface height loss in the winter as mass loss, rather than compaction.
 mb_dt = make_regular_timeseries(dt.datetime(2010,10,26,00,00),dt.datetime(2012,9,2,00,00),86400)
 ts_mb = plt.cumsum(mb_dat[:,0])

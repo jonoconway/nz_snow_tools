@@ -13,15 +13,15 @@ import matplotlib.dates as mdates
 config = {}
 config['num_secs_output']=1800
 config['tacc'] = 274.16
-config['tmelt'] = 273.16
+config['tmelt'] = 274.16
 
 # clark2009 melt parameters
 config['mf_mean'] = 5.0
 config['mf_amp'] = 5.0
 config['mf_alb'] = 2.5
 config['mf_alb_decay'] = 5.0
-config['mf_ros'] = 0
-config['mf_doy_max_ddf'] = 35
+config['mf_ros'] = 2.5 # default 2.5
+config['mf_doy_max_ddf'] = 356 # default 356
 
 # dsc_snow melt parameters
 config['tf'] = 0.05*24  # hamish 0.13. ruschle 0.04, pelliciotti 0.05
@@ -35,10 +35,11 @@ config['a_freshsnow'] = 0.90
 config['a_firn'] = 0.62
 config['alb_swe_thres'] = 10
 config['ros'] = True
+config['ta_m_tt'] = False
 
 # load brewster glacier data
 inp_dat = np.genfromtxt(
-    'S:\Scratch\Jono\Final Brewster Datasets\updated_met_data\BrewsterGlacier_Oct10_Sep12_mod3.dat')
+    'C:/Users/Bonnamourar/OneDrive - NIWA/for Ambre/BrewsterGlacier_Oct10_Sep12_mod3.dat')
 start_t = 9600 -1# 9456 = start of doy 130 10th May 2011 9600 = end of 13th May,18432 = start of 11th Nov 2013,19296 = 1st december 2011
 end_t = 21360  # 20783 = end of doy 365, 21264 = end of 10th January 2012, 21360 = end of 12th Jan
 inp_dt = make_regular_timeseries(dt.datetime(2010,10,25,00,30),dt.datetime(2012,9,2,00,00),1800)
@@ -56,13 +57,13 @@ inp_sfc -= inp_sfc[0]# reset to 0 at beginning of period
 
 # validation data
 seb_dat = np.genfromtxt(
-    'S:\Scratch\Jono\Final Brewster Datasets\SEB_output\cdf - code2p0_MC_meas_noQPS_single_fixed output_fixed_B\modelOUT_br1_headings.txt',skip_header=3)
+    'C:/Users/Bonnamourar/OneDrive - NIWA/for Ambre/modelOUT_br1_headings.txt',skip_header=3)
 seb_mb = seb_dat[start_t-1:end_t, -1]
 seb_mb -= seb_mb[0] # reset to 0
 
 # read in measured daily SEB change
 mb_dat = np.genfromtxt(
-    r'S:\Scratch\Jono\Final Brewster Datasets\mass_balance_validation\5 MB scatters\mchange.dat')
+    'C:/Users/Bonnamourar/OneDrive - NIWA/for Ambre/mchange.dat')
 # note that the measured MB interprets surface height loss in the winter as mass loss, rather than compaction.
 mb_dt = make_regular_timeseries(dt.datetime(2010,10,26,00,00),dt.datetime(2012,9,2,00,00),86400)
 ts_mb = plt.cumsum(mb_dat[:,0])
@@ -104,6 +105,6 @@ plt.xlabel('month')
 plt.ylabel('SWE mm w.e.')
 plt.legend()
 plt.title('cumulative mass balance TF:{}, RF: {}, Tmelt:{}'.format(config['tf'],config['rf'],config['tmelt']))
-plt.savefig('P:/Projects/DSC-Snow/nz_snow_runs/brewster calibration/rain_on_snow/winter spring 2011 daily TF{}RF{}Tmelt{}_ros.png'.format(config['tf'],config['rf'],config['tmelt']))
+plt.savefig('C:/Users/Bonnamourar/OneDrive - NIWA/Winter Spring 2011 TF{}RF{}Tmelt{}_ros.png'.format(config['tf'],config['rf'],config['tmelt']))
 plt.close()
 

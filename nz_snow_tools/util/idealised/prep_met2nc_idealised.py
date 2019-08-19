@@ -72,36 +72,36 @@ for catchment in ['flat_2000', 'north_facing', 'south_facing','bell_2000','bell_
     out_nc_file.close()
 
 #
-# # create real met
-# catchment = 'real'
-# y1 = 703 - 50
-# y2 = 703 + 50
-# x1 = 133 - 50
-# x2 = 133 + 50
-# assert climate_file.variables['easting'][x1:x2][:][0] == eastings[0]
-# assert climate_file.variables['northing'][y1:y2][:][-1] == northings[0]
-#
-# t_grid = np.flip(climate_file.variables['air_temperature'][:, y1:y2, x1:x2],axis=1)
-# plt.imshow(t_grid[0])
-# plt.show()
-#
-# p_grid = np.flip(climate_file.variables['precipitation_amount'][:, y1:y2, x1:x2],axis=1)
-# sw_grid = np.flip(climate_file.variables['surface_downwelling_shortwave_flux'][:, y1:y2, x1:x2],axis=1)
-# elev = np.flipud(climate_file.variables['elevation'][y1:y2, x1:x2])
-#
-# plt.figure()
-# plt.imshow(elev)
-# plt.show()
-#
-# output_dem = 'nztm250m'  # identifier for output dem
-# data_id = '{}_{}'.format(catchment, output_dem)  # name to identify the output data
-# out_file = 'P:/Projects/DSC-Snow/runs/idealised/met_inp_{}_{}_origin{}.nc'.format(data_id, 2016, origin)
-# out_nc_file = setup_nztm_grid_netcdf(out_file, None, ['air_temperature', 'precipitation_amount', 'surface_downwelling_shortwave_flux'],
-#                                      hourly_dt, northings, eastings, lats, lons, elev)
-# for var, data in zip(['air_temperature', 'precipitation_amount', 'surface_downwelling_shortwave_flux'],
-#                      [t_grid, p_grid, sw_grid]):
-#     out_nc_file.variables[var][:] = data
-# out_nc_file.close()
+# create real met
+catchment = 'real'
+y1 = 703 - 50
+y2 = 703 + 50
+x1 = 133 - 50
+x2 = 133 + 50
+assert climate_file.variables['easting'][x1:x2][:][0] == eastings[0]
+assert climate_file.variables['northing'][y1:y2][:][-1] == northings[0]
+
+t_grid = np.flip(climate_file.variables['air_temperature'][:, y1:y2, x1:x2],axis=1)
+plt.imshow(t_grid[0])
+plt.show()
+
+p_grid = np.flip(climate_file.variables['precipitation_amount'][:, y1:y2, x1:x2],axis=1)
+sw_grid = np.flip(climate_file.variables['surface_downwelling_shortwave_flux'][:, y1:y2, x1:x2],axis=1)
+elev = np.flipud(climate_file.variables['elevation'][y1:y2, x1:x2])
+
+plt.figure()
+plt.imshow(elev)
+plt.show()
+
+output_dem = 'nztm250m'  # identifier for output dem
+data_id = '{}_{}'.format(catchment, output_dem)  # name to identify the output data
+out_file = 'P:/Projects/DSC-Snow/runs/idealised/met_inp_{}_{}_origin{}.nc'.format(data_id, 2016, origin)
+out_nc_file = setup_nztm_grid_netcdf(out_file, None, ['air_temperature', 'precipitation_amount', 'surface_downwelling_shortwave_flux'],
+                                     hourly_dt, northings, eastings, lats, lons, elev)
+for var, data in zip(['air_temperature', 'precipitation_amount', 'surface_downwelling_shortwave_flux'],
+                     [t_grid, p_grid, sw_grid]):
+    out_nc_file.variables[var][:] = data
+out_nc_file.close()
 
 
 

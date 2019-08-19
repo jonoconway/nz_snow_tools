@@ -1,7 +1,9 @@
 """
 a collection of utilities to handle dates / grids etc to support snow model
 """
-
+from __future__ import division
+# import os
+# os.environ['PROJ_LIB']=r'C:\miniconda\envs\nz_snow27\Library\share'
 import datetime
 import numpy as np
 import shapefile
@@ -11,6 +13,15 @@ from pyproj import Proj, transform
 
 
 ### Date utilities
+
+def convert_dt_to_timestamp(dt_list):
+    """
+    returns a list with the timesince unix time for a given list of datetimes
+    :param dt_list:
+    :return:
+    """
+    timestamp= [(dt - datetime.datetime(1970, 1, 1)).total_seconds() for dt in dt_list]
+    return timestamp
 
 def convert_datetime_julian_day(dt_list):
     """ returns the day number for each date object in d_list
@@ -155,8 +166,8 @@ def random_cascade(l):
     weights = np.random.random(2)
     weights /= weights.sum()
 
-    res[:l / 2] = weights[0] * random_cascade(l // 2)
-    res[l / 2:] *= weights[1] * random_cascade(l // 2)
+    res[:l // 2] = weights[0] * random_cascade(l // 2)
+    res[l // 2:] *= weights[1] * random_cascade(l // 2)
     return res
 
 
@@ -183,7 +194,7 @@ def process_temp(max_temp_daily, min_temp_daily):
     scaling_factors = hour_func(np.arange(1., 25.))
 
     hourly_data = np.zeros((max_temp_daily.shape[0] * 24, max_temp_daily.shape[1]), dtype=np.float32)
-    hours = np.array(range(1, 25) * max_temp_daily.shape[0])
+    hours = np.array(list(range(1, 25)) * max_temp_daily.shape[0])
 
     # Calculate each piecewise element seperately as some need the previous days data
     mask = hours < 8
@@ -281,6 +292,28 @@ def trim_lat_lon_bounds(mask, lat_array, lon_array, nztm_dem, y_centres, x_centr
     return lats, lons, elev, northings, eastings
 
 
+def resample_to_fsca(snow_grid, rl):
+    """
+
+    :param snow_grid: grid of fractional or binary (0/1 snow)
+    :param rl: resample length - the number of grid cells in each direction to include in new fsca. e.g. 5  = 25 grid points to fsca
+    :return: fcsa = fractional snow covered area for the same area as snow_grid, but may be smaller if grid size is not a multiple of resample length
+    """
+    ny = snow_grid.shape[0]
+    nx = snow_grid.shape[1]
+    ny_out = ny // rl  # integer divide to ensure fits
+    nx_out = nx // rl
+
+    fsca = np.zeros((ny_out, nx_out))
+
+    for i in range(ny_out):
+        for j in range(nx_out):
+            snow = snow_grid[i * rl:(i + 1) * rl, j * rl:(j + 1) * rl]
+            fsca[i, j] = np.sum(snow) / (rl * rl)
+
+    return fsca
+
+
 # misc
 
 def calc_toa(lat_ref, lon_ref, hourly_dt):
@@ -318,7 +351,7 @@ def calc_toa(lat_ref, lon_ref, hourly_dt):
     return SRtoa
 
 
-def setup_nztm_dem(dem_file, extent_w=1.2e6, extent_e=1.4e6, extent_n=5.13e6, extent_s=4.82e6, resolution=250,origin='bottomleft'):
+def setup_nztm_dem(dem_file, extent_w=1.2e6, extent_e=1.4e6, extent_n=5.13e6, extent_s=4.82e6, resolution=250, origin='bottomleft'):
     """
     load dem tif file. defaults to clutha 250 dem.
     :param dem_file: string specifying path to dem
@@ -332,7 +365,7 @@ def setup_nztm_dem(dem_file, extent_w=1.2e6, extent_e=1.4e6, extent_n=5.13e6, ex
     """
     if dem_file is not None:
         nztm_dem = Image.open(dem_file)
-        if origin=='bottomleft':
+        if origin == 'bottomleft':
             # np.array(nztm_dem).shape is (1240L, 800L) but origin is in NW corner. Move to SW to align with increasing Easting and northing.
             nztm_dem = np.flipud(np.array(nztm_dem))
         if origin == 'topleft':
@@ -349,7 +382,7 @@ def setup_nztm_dem(dem_file, extent_w=1.2e6, extent_e=1.4e6, extent_n=5.13e6, ex
     y_centres = np.arange(extent_s + resolution / 2, extent_n, resolution)
     if origin == 'topleft':
         y_centres = y_centres[::-1]
-    y_array, x_array = np.meshgrid(y_centres, x_centres, indexing='ij') # this makes an array with northings and eastings increasing
+    y_array, x_array = np.meshgrid(y_centres, x_centres, indexing='ij')  # this makes an array with northings and eastings increasing
     lat_array, lon_array = nztm_to_wgs84(y_array, x_array)
     # plot to check the dem
     # plt.imshow(nztm_dem, origin=0, interpolation='none', cmap='terrain')
@@ -377,7 +410,7 @@ def trim_data_to_mask(data, mask):
     elif data.ndim == 3:
         trimmed_data = data[:, lat_min_idx:lat_max_idx + 1, lon_min_idx:lon_max_idx + 1].astype(data.dtype)
     else:
-        print 'data does not have correct dimensions'
+        print('data does not have correct dimensions')
 
     return trimmed_data
 
@@ -425,3 +458,133 @@ def rmsd(y_sim, y_obs):
     rs = np.sqrt(np.mean((y_sim - y_obs) ** 2))
 
     return rs
+
+
+def mean_absolute_error(y_sim, y_obs):
+    """
+    calculate the mean absolute error
+
+    :param y_sim: series of simulated values
+    :param y_obs: series of observed values
+    :return:
+    """
+    assert y_sim.ndim == 1 and y_obs.ndim == 1 and len(y_sim) == len(y_obs)
+
+    mbd = np.sum(np.abs(y_sim - y_obs)) / len(y_sim)
+
+    return mbd
+
+
+def coef_determ(y_sim, y_obs):
+    """
+    calculate the coefficient of determination
+
+    :param y_sim: series of simulated values
+    :param y_obs: series of observed values
+    :return:
+    """
+    assert y_sim.ndim == 1 and y_obs.ndim == 1 and len(y_sim) == len(y_obs)
+
+    r = np.corrcoef(y_sim, y_obs)
+    r2 = r[0, 1] ** 2
+
+    return r2
+
+
+def basemap_interp(datain, xin, yin, xout, yout, interpolation='NearestNeighbour'):
+    """
+       Interpolates a 2D array onto a new grid (only works for linear grids),
+       with the Lat/Lon inputs of the old and new grid. Can perfom nearest
+       neighbour interpolation or bilinear interpolation (of order 1)'
+
+       This is an extract from the basemap module (truncated)
+    """
+
+    # Mesh Coordinates so that they are both 2D arrays
+    xout, yout = np.meshgrid(xout, yout)
+
+    # compute grid coordinates of output grid.
+    delx = xin[1:] - xin[0:-1]
+    dely = yin[1:] - yin[0:-1]
+
+    xcoords = (len(xin) - 1) * (xout - xin[0]) / (xin[-1] - xin[0])
+    ycoords = (len(yin) - 1) * (yout - yin[0]) / (yin[-1] - yin[0])
+
+    xcoords = np.clip(xcoords, 0, len(xin) - 1)
+    ycoords = np.clip(ycoords, 0, len(yin) - 1)
+
+    # Interpolate to output grid using nearest neighbour
+    if interpolation == 'NearestNeighbour':
+        xcoordsi = np.around(xcoords).astype(np.int32)
+        ycoordsi = np.around(ycoords).astype(np.int32)
+        dataout = datain[ycoordsi, xcoordsi]
+
+    # Interpolate to output grid using bilinear interpolation.
+    elif interpolation == 'Bilinear':
+        xi = xcoords.astype(np.int32)
+        yi = ycoords.astype(np.int32)
+        xip1 = xi + 1
+        yip1 = yi + 1
+        xip1 = np.clip(xip1, 0, len(xin) - 1)
+        yip1 = np.clip(yip1, 0, len(yin) - 1)
+        delx = xcoords - xi.astype(np.float32)
+        dely = ycoords - yi.astype(np.float32)
+        dataout = (1. - delx) * (1. - dely) * datain[yi, xi] + \
+                  delx * dely * datain[yip1, xip1] + \
+                  (1. - delx) * dely * datain[yip1, xi] + \
+                  delx * (1. - dely) * datain[yi, xip1]
+
+    return dataout
+
+
+def fill_timeseries_dud(inp_dt, inp_dat, tstep, max_gap=None):
+    """
+        fill in gaps in a timeseries using linear interpolation between valid points (method doesn't work that well)
+
+    :param inp_dt: array or list of datetimes corresponding to your data
+    :param inp_dat: variable you wish to fill
+    :param tstep: timestep of data in seconds
+    :param max_gap: maximum gap  to fill (seconds)
+    :return: out_dt, out_dat (datetimes and data)
+    """
+    assert len(inp_dt)==len(inp_dat)
+
+    out_dt = []
+    out_dat = []
+    if max_gap==None:
+        max_gap=tstep*1.
+    for j in range(len(inp_dt) - 1):
+        gap = (inp_dt[j + 1] - inp_dt[j]).total_seconds()
+        if gap != tstep and gap <= max_gap:
+            fill_dt = make_regular_timeseries(inp_dt[j],inp_dt[j+1],tstep)
+            fill_dat = np.interp(convert_dt_to_timestamp(fill_dt),convert_dt_to_timestamp(inp_dt[j:j+2]),inp_dat[j:j+2])
+            out_dt.extend(fill_dt[1:-1])
+            out_dat.extend(fill_dat[1:-1])
+        elif gap != tstep and gap >= max_gap:
+            fill_dt = make_regular_timeseries(inp_dt[j], inp_dt[j + 1], tstep)
+            fill_dat = np.ones(len(fill_dt))*np.nan
+            out_dt.extend(fill_dt[1:-1])
+            out_dat.extend(fill_dat[1:-1])
+        else:
+            out_dt.extend([inp_dt[j]])
+            out_dat.extend([inp_dat[j]])
+
+    return np.asarray(out_dt), np.asarray(out_dat,dtype=inp_dat.dtype)
+
+
+
+def fill_timeseries(inp_dt, inp_dat, tstep):
+    """
+    fill in gaps in a timeseries using linear interpolation between valid points
+
+    :param inp_dt: array or list of datetimes corresponding to your data
+    :param inp_dat: variable you wish to fill
+    :param tstep: timestep of data in seconds
+    :return: out_dt, out_dat (datetimes and data)
+    """
+    assert len(inp_dt)==len(inp_dat)
+
+    out_dt = make_regular_timeseries(inp_dt[0],inp_dt[-1],tstep)
+    out_dat = np.interp(convert_dt_to_timestamp(out_dt), convert_dt_to_timestamp(inp_dt), inp_dat)
+
+    return np.asarray(out_dt), out_dat

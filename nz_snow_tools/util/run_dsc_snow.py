@@ -6,18 +6,17 @@ import shutil
 import f90nml
 
 # compatibility for windows or linux
-projects =  '/mnt/shareddrive/Projects' #
+projects = '/mnt/shareddrive/Projects' #
 temp = '/mnt/temp'
-# data2 =  '/mnt/data2'
-origin =  'topleft' # origin of data  - options are 'topleft' or 'bottomleft'
+origin = 'topleft' # origin of data  - options are 'topleft' or 'bottomleft'
 path_to_ddf_run = "/home/bs/dsc_snow/ddf/ddf_run" # path to fortran executable
-config_id_in = '5' # string identifying suffix to the namelist configuration file used as default
-config_id_out = '5' # string identifying suffix to the namelist configuration file used by the model
+config_id_in = '6' # string identifying suffix to the namelist configuration file used as default
+config_id_out = '6' # string identifying suffix to the namelist configuration file used by the model
 path_to_namelist = projects + '/DSC-Snow/runs/input/clutha_nztm250m_erebus/ddf_config_{}.txt'.format(config_id_in  )
 years = range(2000, 2016 + 1)
 #inp_id = 'jobst_ucc' # string identifying the input data used (suffix to input netcdf files)
 
-inp_ids = ['jobst_ucc', 'norton', 'vcsn']
+inp_ids =['norton']# ['jobst_ucc', 'norton', 'vcsn']
 
 for inp_id in inp_ids:
     for year in years:
