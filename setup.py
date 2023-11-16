@@ -32,7 +32,6 @@ setup(
         'matplotlib',
         'netCDF4',
         'numpy',
-        'basemap',
         'pyshp',
         'pillow',
         'pyproj',

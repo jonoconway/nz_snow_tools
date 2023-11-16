@@ -13,13 +13,10 @@ import netCDF4 as nc
 import numpy as np
 import pickle
 
-import os  # need to import this as basemap is a bit broken https://github.com/conda-forge/basemap-feedstock/issues/30
-
-# os.environ['PROJ_LIB'] = r'C:\miniconda\envs\nz_snow27\Library\share'
-import mpl_toolkits.basemap as basemap
 from scipy import interpolate
+
 from nz_snow_tools.util.utils import process_precip, process_temp, create_mask_from_shpfile, make_regular_timeseries, calc_toa, trim_lat_lon_bounds, \
-    setup_nztm_dem
+    setup_nztm_dem, basemap_interp
 
 from nz_snow_tools.util.write_fsca_to_netcdf import write_nztm_grids_to_netcdf, setup_nztm_grid_netcdf
 
@@ -121,7 +118,7 @@ def interpolate_met(in_dat, var, in_lons, in_lats, in_elev, out_lons, out_lats, 
                 in_t_offset = in_elev * lapse
                 in_dat1 = in_dat1 - in_t_offset
 
-            out_dat1 = basemap.interp(in_dat1, in_lons, in_lats, XI, YI, checkbounds=False, masked=False, order=1)  # bilinear grid - will miss edges
+            out_dat1 = basemap_interp(in_dat1, in_lons, in_lats, XI, YI, interpolation='Bilinear')  # bilinear grid - will miss edges
             if type(in_dat) == np.ma.core.MaskedArray:
                 if type(out_elev) == np.ma.core.MaskedArray:
                     elev_mask = out_elev.mask
@@ -137,11 +134,11 @@ def interpolate_met(in_dat, var, in_lons, in_lats, in_elev, out_lons, out_lats, 
                 newarr = array[~array.mask]
                 GD1 = interpolate.griddata((x1, y1), newarr.ravel(), (xx, yy), method='nearest')
                 GD1 = np.ma.masked_invalid(GD1)
-                out_dat0 = basemap.interp(GD1, in_lons, in_lats, XI, YI, checkbounds=False, masked=False, order=0)  # nearest neighbour grid to fill edges
+                out_dat0 = basemap_interp(GD1, in_lons, in_lats, XI, YI, interpolation='NearestNeighbour')  # nearest neighbour grid to fill edges
                 ind = np.logical_and(out_dat1.mask, elev_mask == False)  # select areas without data in bilinear grid and above sea level
                 out_dat1[ind] = out_dat0[ind]  # use nearest neighbour grid to fill grid with elev mask to set limits
                 out_dat1[elev_mask] = np.nan
-                # out_dat0 = basemap.interp(in_dat1, in_lons, in_lats, XI, YI, checkbounds=False, masked=False, order=0)  # nearest neighbour grid to fill edges
+                # out_dat0 = basemap_interp(in_dat1, in_lons, in_lats, XI, YI, checkbounds=False, masked=False, order=0)  # nearest neighbour grid to fill edges
                 # out_dat1[np.where(out_dat1.mask)] = out_dat0[np.where(out_dat1.mask)]  # replace the masked elements in bilinear grid with the nn grid
 
             if var in ['tmax', 'tmin', 'air_temp']:  # lapse back to new elevations
@@ -162,9 +159,9 @@ def interpolate_met(in_dat, var, in_lons, in_lats, in_elev, out_lons, out_lats, 
             in_t_offset = in_elev * lapse
             in_dat = in_dat - in_t_offset
 
-        out_dat = basemap.interp(in_dat, in_lons, in_lats, XI, YI, checkbounds=False, masked=False, order=1)
+        out_dat = basemap_interp(in_dat, in_lons, in_lats, XI, YI, interpolation='Bilinear')
         if type(in_dat) == np.ma.core.MaskedArray:
-            out_dat0 = basemap.interp(in_dat, in_lons, in_lats, XI, YI, checkbounds=False, masked=False, order=0)  # nearest neighbour grid to fill edges
+            out_dat0 = basemap_interp(in_dat, in_lons, in_lats, XI, YI, interpolation='NearestNeighbour')  # nearest neighbour grid to fill edges
             out_dat[np.where(out_dat.mask)] = out_dat0[np.where(out_dat.mask)]
         # mask data at sea level
         # out_dat1[out_elev.data < 1.0] = np.nan # no longer send in a masked array

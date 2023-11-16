@@ -2,8 +2,7 @@
 a collection of utilities to handle dates / grids etc to support snow model
 """
 from __future__ import division
-# import os
-# # os.environ['PROJ_LIB']=r'C:\miniconda\envs\nz_snow27\Library\share'
+
 import datetime
 import numpy as np
 from matplotlib.path import Path
@@ -639,15 +638,15 @@ def basemap_interp(datain, xin, yin, xout, yout, interpolation='NearestNeighbour
        neighbour interpolation or bilinear interpolation (of order 1)'
 
        This is an extract from the basemap module (truncated)
+
+       https://github.com/matplotlib/basemap/blob/3646ba1122a52cea0779b7e08dd1036a1b7ff200/packages/basemap/src/mpl_toolkits/basemap/__init__.py#L4882
+
     """
 
     # Mesh Coordinates so that they are both 2D arrays
     xout, yout = np.meshgrid(xout, yout)
 
     # compute grid coordinates of output grid.
-    delx = xin[1:] - xin[0:-1]
-    dely = yin[1:] - yin[0:-1]
-
     xcoords = (len(xin) - 1) * (xout - xin[0]) / (xin[-1] - xin[0])
     ycoords = (len(yin) - 1) * (yout - yin[0]) / (yin[-1] - yin[0])
 
