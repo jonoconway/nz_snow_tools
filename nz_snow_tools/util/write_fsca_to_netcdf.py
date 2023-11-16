@@ -6,6 +6,7 @@ import netCDF4 as nc
 from time import strftime, gmtime
 import numpy as np
 
+from nz_snow_tools.util.utils import nztm_to_wgs84
 
 def create_ncvar_temperaure(ds, no_time=False):
     if no_time == False:

@@ -18,8 +18,10 @@ import cartopy.crs as ccrs
 import datetime as dt
 from dateutil import parser
 import matplotlib.pylab as plt
+import pickle
+from scipy import interpolate
 
-from nz_snow_tools.util.utils import make_regular_timeseries, u_v_from_ws_wd,ws_wd_from_u_v
+from nz_snow_tools.util.utils import make_regular_timeseries, u_v_from_ws_wd, ws_wd_from_u_v
 from nz_snow_tools.met.interp_met_data_hourly_vcsn_data import interpolate_met, setup_nztm_dem, setup_nztm_grid_netcdf, trim_lat_lon_bounds
 
 if len(sys.argv) == 2:
@@ -144,13 +146,12 @@ for var in config['variables'].keys():
                     inp_dt_rh = nc.num2date(inp_nc_file_rh.variables[config['variables']['rh']['input_time_var']][:],
                                             inp_nc_file_rh.variables[config['variables']['rh']['input_time_var']].units, only_use_cftime_datetimes=False)
                     inp_nc_var_rh = inp_nc_file_rh.variables[config['variables']['rh']['input_var_name']].data
-                    import pickle
-                    from scipy import interpolate
 
-                    dict = pickle.load(open('C:/Users/conwayjp/OneDrive - NIWA/projects/SIN_density_SIP/input_met/hydrometeor_temp_lookup.pkl', 'rb'))
-                    th_interp = interpolate.interp2d(dict['rh'], dict['tc'], dict['th'], kind='linear')
 
-    # run though each timestep output interpolate data to fine grid
+                    dict_hm = pickle.load(open('C:/Users/conwayjp/OneDrive - NIWA/projects/SIN_density_SIP/input_met/hydrometeor_temp_lookup.pkl', 'rb'))
+                    th_interp = interpolate.interp2d(dict_hm['rh'], dict_hm['tc'], dict_hm['th'], kind='linear')
+
+    # run through each timestep output interpolate data to fine grid
     for ii, dt_t in enumerate(out_dt):
         if var == 'lw_rad':
             # calculate effective emissivity, interpolate that, then recreate lw rad with lapsed air temperature.
@@ -159,7 +160,7 @@ for var in config['variables'].keys():
             hi_res_out = interpolate_met(input_hourly.filled(np.nan), var, inp_lons, inp_lats, inp_elev_interp, rlons, rlats, elev, single_dt=True)
             hi_res_tk = out_nc_file[config['variables']['air_temp']['output_name']][ii, :, :]
             hi_res_out = hi_res_out * (5.67e-8 * hi_res_tk ** 4)
-        elif var == 'air_pres': #assumes input data is in Pa
+        elif var == 'air_pres':  # assumes input data is in Pa
             # reduce to sea-level - interpolate then raise to new grid.
             input_hourly = inp_nc_var[int(np.where(inp_dt == dt_t)[0]), :, :]
             input_hourly = input_hourly + 101325 * (1 - (1 - input_elev / 44307.69231) ** 5.253283)
@@ -174,7 +175,7 @@ for var in config['variables'].keys():
             if config['variables']['air_pres']['output_meta']['units'] == 'hPa':
                 hi_res_out /= 100.
 
-        elif var == 'rh': # assumes input data is as a fraction
+        elif var == 'rh':  # assumes input data is as a fraction
             # need to ignore mask for rh data and has incorrect limit of 1.
             input_hourly = inp_nc_var[int(np.where(inp_dt == dt_t)[0]), :, :].data
             input_hourly = input_hourly * 100  # convert to %

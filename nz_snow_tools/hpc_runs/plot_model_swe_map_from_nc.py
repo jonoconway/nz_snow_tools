@@ -23,7 +23,7 @@ def plot_swe(run_id, met_inp, which_model, hydro_years_to_take, catchment, outpu
 
     # bin_edges = [-0.001, 30, 60, 90, 120, 180, 270, 360]  # use small negative number to include 0 in the interpolation
 
-    for i, year_to_take in enumerate(hydro_years_to_take):
+    for year_to_take in hydro_years_to_take:
         modis_mask = np.load(mask_file)
         fig1 = plt.figure(figsize=[8, 6])
         print('loading data for year {}'.format(year_to_take))
