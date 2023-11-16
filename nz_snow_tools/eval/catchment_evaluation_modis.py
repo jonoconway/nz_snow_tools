@@ -90,7 +90,7 @@ def calc_modis_catchment_metrics(catchment, years_to_take, mask_folder, modis_fo
     outfile_nc = '/ts_MODIS_{}_{}_{}_{}_thres{}.nc'.format(years_to_take[0], years_to_take[-1], catchment, modis_dem, modis_sc_threshold)
     ds = nc.Dataset(output_folder + outfile_nc,'w')
     ds.created = strftime("%Y-%m-%d %H:%M:%S", gmtime())
-    ds.comment= 'catchment averaged fractional snow covered area generated with https://github.com/bodekerscientific/nz_snow_tools/eval/catchment_evaluation_modis.py'
+    ds.comment= 'catchment averaged fractional snow covered area generated with https://github.com/jonoconway/nz_snow_tools/eval/catchment_evaluation_modis.py'
 
     ds.createDimension('time', )
     t = ds.createVariable('time', 'f8', ('time',))

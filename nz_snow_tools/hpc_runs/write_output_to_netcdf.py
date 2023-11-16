@@ -121,7 +121,7 @@ def write_fields_to_netcdf(outfile, t_scd, t_lat, t_lon, t_northing, t_easting, 
                         'institution': 'NIWA',
                         'author': 'Jono Conway',
                         'email': 'jono.conway@niwa.co.nz',
-                        'source': 'https://github.com/bodekerscientific/nz_snow_tools/blob/master/nz_snow_tools/hpc_runs/write_output_to_netcdf.py',
+                        'source': 'https://github.com/jonoconway/nz_snow_tools/blob/master/nz_snow_tools/hpc_runs/write_output_to_netcdf.py',
                         'file_creation_time': dt.datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
                     })
 
@@ -163,7 +163,7 @@ def write_fields_to_netcdf_small(outfile, t_scd, t_northing, t_easting, t_dem):
                         'institution': 'NIWA',
                         'author': 'Jono Conway',
                         'email': 'jono.conway@niwa.co.nz',
-                        'source': 'https://github.com/bodekerscientific/nz_snow_tools/blob/master/nz_snow_tools/hpc_runs/write_output_to_netcdf.py',
+                        'source': 'https://github.com/jonoconway/nz_snow_tools/blob/master/nz_snow_tools/hpc_runs/write_output_to_netcdf.py',
                         'file_creation_time': dt.datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
                     })
 

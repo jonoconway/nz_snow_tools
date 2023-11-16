@@ -182,7 +182,6 @@ def write_nztm_grids_to_netcdf(fname, list_of_data_arrays, var_names, datetime_l
     ds = nc.Dataset(fname, 'w')
 
     # add common attributes
-    ds.institution = "Bodeker Scientific"
     ds.title = ''
     ds.source = ''
 

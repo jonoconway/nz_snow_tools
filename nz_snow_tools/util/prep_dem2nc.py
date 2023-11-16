@@ -77,11 +77,10 @@ gx, gy = np.gradient(elev, 250.0)
 
 file_out = netCDF4.Dataset(out_file, 'w')
 
-file_out.institution = 'Bodeker Scientific'
 file_out.title = 'topographic fields for snow model'
 file_out.source = 'prep_dem2nc.py'
 file_out.author = 'Jono Conway'
-file_out.email = 'jono@bodekerscientific.com'
+file_out.email = 'jono.conway@niwa.co.nz'
 file_out.created = strftime("%Y-%m-%d %H:%M:%S", gmtime())
 
 # setattr(file_out,'versionNumber',1)
