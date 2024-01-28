@@ -15,7 +15,8 @@ pressure: cubic interpolatation between 9am instantaneous values
 cloudiness: daily average values
 sw: hourly values as hourly TOA * daily observed fraction of TOA
 wind: daily average value
- use environment  pvlib38-x
+ did use environment  pvlib38-x
+ now use environment topnetutils39_geo_pvlib
 
 
 """
@@ -28,8 +29,7 @@ import pandas as pd
 
 import matplotlib.pylab as plt
 import xarray as xr
-from nz_snow_tools.util.utils import make_regular_timeseries, process_precip, process_temp_flex, calc_toa, daily_to_hourly_temp_grids_new, \
-    daily_to_hourly_swin_grids_new
+from nz_snow_tools.util.utils import process_precip, daily_to_hourly_temp_grids_new, daily_to_hourly_swin_grids_new
 
 
 def find_pressure_offset_elevation(elev_in, elev_out):
@@ -52,11 +52,11 @@ lat_to_take = [-44.075, -44.125]
 lon_to_take = [169.425, 169.475]
 
 first_time = dt.datetime(1972, 4, 1, 1, 0, tzinfo=dt.timezone(dt.timedelta(hours=12)))
-last_time = dt.datetime(2021, 4, 1, 0, 0, tzinfo=dt.timezone(dt.timedelta(hours=12)))
+last_time = dt.datetime(2023, 4, 1, 0, 0, tzinfo=dt.timezone(dt.timedelta(hours=12)))
 out_dt = pd.date_range(first_time, last_time, freq='1H').to_pydatetime()
 
-first_time_lt = dt.datetime(1972, 4, 1, 1, 0)
-last_time_lt = dt.datetime(2021, 4, 1, 0, 0)
+first_time_lt = dt.datetime(1972, 4, 1, 1, 0) # local time version
+last_time_lt = dt.datetime(2023, 4, 1, 0, 0)
 out_dt_lt = pd.date_range(first_time_lt, last_time_lt, freq='1H').to_pydatetime()
 
 outfile = met_out_folder + '/met_inp_{}_{}_{}.dat'.format(data_id, first_time_lt.strftime('%Y%m%d%H%M'), last_time_lt.strftime('%Y%m%d%H%M'))
@@ -77,7 +77,7 @@ print('time output from {} to {}'.format(first_time.isoformat(), last_time.isofo
 # ds_rain = ds_rain.assign_coords(longitude=ds_rain['longitude'].round(3)).assign_coords(latitude=ds_rain['latitude'].round(3))
 # ds_rain.sel(longitude=[169.425,169.475],latitude=[-44.075,-44.125]).to_netcdf('/nesi/project/niwa03098/rain.nc')
 
-vcsn_folder = 'C:/Users/conwayjp/OneDrive - NIWA/projects/MarsdenFS2018/Nariefa/vcsn/to share'
+vcsn_folder = 'C:/Users/conwayjp/OneDrive - NIWA/projects/MarsdenFS2018/Nariefa/vcsn/to share/update_to_aug_2023'
 vcsn_tmax_file = vcsn_folder + '/tmax.nc'  # max air temp (C) over 24 hours TO 9am on local day #  NOTE this differs from cliflo version
 vcsn_tmin_file = vcsn_folder + '/tmin.nc'  # min air temp (C) over 24 hours TO 9 am on local day
 vcsn_rh_file = vcsn_folder + '/rh.nc'  # rh (%) AT 9am on local day
@@ -85,9 +85,9 @@ vcsn_mslp_file = vcsn_folder + '/mslp.nc'  # mslp (hPa) AT 9am on local day
 vcsn_swin_file = vcsn_folder + '/srad.nc'  # downwelling shortwave radiation (W m-2) over 24 hours FROM midnight on local day # this is different to the description in netCDF variable
 vcsn_ws_file = vcsn_folder + '/ws.nc'  # Mean 10m wind speed (m/s) over 24 hours FROM midnight local day # this is different the description in netCDF variable
 vcsn_precip_file = vcsn_folder + '/rain.nc'  # Total precip (mm) over 24 hours TO 9am local day # NOTE this differs from cliflo version
-vcsn_tmax_original = vcsn_folder + '/tmax_original.nc'  # old version of air temperature
-vcsn_tmin_original = vcsn_folder + '/tmin_original.nc'  # old version of air temperature
-
+# vcsn_tmax_original = vcsn_folder + '/tmax_original.nc'  # old version of air temperature
+# vcsn_tmin_original = vcsn_folder + '/tmin_original.nc'  # old version of air temperature
+print('open input dataset')
 # define times to take (include offset to)
 ds_tmax = xr.open_dataset(vcsn_tmax_file)
 ds_tmin = xr.open_dataset(vcsn_tmin_file)
@@ -97,24 +97,36 @@ ds_swin = xr.open_dataset(vcsn_swin_file)
 ds_ws = xr.open_dataset(vcsn_ws_file)
 ds_precip = xr.open_dataset(vcsn_precip_file)
 
+print('add bias corrected wind and precip')
 # update precip and wind variables from bias corrected files
-ds_precip_QMAP = xr.load_dataset(r"C:\Users\conwayjp\OneDrive - NIWA\projects\MarsdenFS2018\Nariefa\vcsn\to share\precip_QMAP.nc")
-precip_QMAP = np.zeros((ds_precip_QMAP['precip'][0, :].shape[0], 2, 2)) # set up array with extra dimensions then copy data in
+# ds_precip_QMAP = xr.load_dataset("C:/Users/conwayjp/OneDrive - NIWA/projects/MarsdenFS2018/Nariefa/vcsn/to share/update_to_aug_2023/precip_QMAP.nc")
+df_precip_QMAP = pd.read_csv("C:/Users/conwayjp/OneDrive - NIWA/projects/MarsdenFS2018/Nariefa/vcsn/to share/update_to_aug_2023/qmap_precip_processed.csv")
+precip_QMAP = np.zeros((df_precip_QMAP['precip'].shape[0], 2, 2)) # set up array with extra dimensions then copy data in
 for i in range(2):
     for j in range(2):
-        precip_QMAP[:, i, j] = ds_precip_QMAP['precip'][0, :]
+        precip_QMAP[:, i, j] = df_precip_QMAP['precip'].values
 ds_precip = ds_precip.assign(rain_bc=ds_precip['rain'].copy(data=precip_QMAP)) # create bias corrected variable with same dimensions as original
 
-ds_wind_QMAP = xr.load_dataset(r"C:\Users\conwayjp\OneDrive - NIWA\projects\MarsdenFS2018\Nariefa\vcsn\to share\wind_QMAP.nc")
+# ds_wind_QMAP = xr.load_dataset("C:/Users/conwayjp/OneDrive - NIWA/projects/MarsdenFS2018/Nariefa/vcsn/to share/update_to_aug_2023/wind_QMAP.nc")
+df_wind_QMAP = pd.read_csv("C:/Users/conwayjp/OneDrive - NIWA/projects/MarsdenFS2018/Nariefa/vcsn/to share/update_to_aug_2023/qmap_wind_processed.csv")
 wind_QMAP = np.zeros((ds_ws['wind'].shape[0], 2, 2)) # set up array with extra dimensions then copy data in
 for i in range(2):
     for j in range(2):
-        wind_QMAP[10226:, i, j] = ds_wind_QMAP['wind'][0, :] # 10226:
+        wind_QMAP[10226:, i, j] = df_wind_QMAP['wind'].values # 10226:
 ds_ws = ds_ws.assign(wind_bc=ds_ws['wind'].copy(data=wind_QMAP))# create bias corrected variable with same dimensions as original
 
-# load variables
+
+print('load variables')
+#TODO Jan 2024 for some reason xarray is not reading the timestamps as time zone aware - datetime64[ns] 1972-01-01T21:00:00,
+# This throwing errors when comparing to first_time e.g. datetime.datetime(1972, 4, 1, 1, 0, tzinfo=datetime.timezone(datetime.timedelta(seconds=43200)))
+# https://numpy.org/doc/stable/reference/arrays.datetime.html
+# the behaviour is still as expected, with the data being the same produced in ealier versions.
+# >>>np.datetime64(first_time)
+# <input>:1: DeprecationWarning: parsing timezone aware datetimes is deprecated; this will raise an error in the future
+# numpy.datetime64('1972-03-31T13:00:00.000000')
+
 # take day either side for tmax,tmin,rh,mslp, as well as offsetting tmax forward one day and also taking one extra day for precip. SW and ws are already midnight-midnight
-inp_precip = ds_precip['rain_bc'].sel(time=slice(first_time, last_time + dt.timedelta(days=1)), longitude=lon_to_take,
+inp_precip = ds_precip['rain_bc'].sel(time=slice(first_time_lt, last_time_lt + dt.timedelta(days=1)), longitude=lon_to_take,
                                    latitude=lat_to_take)  # also take value from next day as is total over previous 24 hours
 inp_tmax = ds_tmax['tmax'].sel(time=slice(first_time, last_time + dt.timedelta(days=2)), longitude=lon_to_take,
                                latitude=lat_to_take)  # take value from next day as is the max value over previous 24 hours.
@@ -135,6 +147,7 @@ inp_ws = inp_ws.assign_coords(time=('time', updated_time.data))
 
 inp_elev = ds_tmax['elevation'].sel(longitude=lon_to_take, latitude=lat_to_take)
 
+print('make hi res and bias correction')
 # spatial interpolation and bias correction
 hi_res_elev = inp_elev
 # bias corrected air temperature
@@ -198,6 +211,7 @@ hi_res_ws = inp_ws  #
 hi_res_lats = ds_rh['latitude'].data
 hi_res_lons = ds_rh['longitude'].data
 
+print('convert to hourly')
 # convert to hourly
 # precip: multicative random cascade
 # precip: send in data for start day to end date+1, then cut the first 15 hours and last 9 hours.
@@ -241,11 +255,12 @@ hourly_precip = xr.DataArray(hourly_precip, hourly_rh.coords, name='precip')
 hourly_temp = xr.DataArray(hourly_temp, hourly_rh.coords, name='tempC')
 hourly_swin = xr.DataArray(hourly_swin, hourly_rh.coords, name='swin')
 
+print('merge into one dataset')
 ds = xr.merge([hourly_precip, hourly_temp, hourly_rh, hourly_pres, hourly_ws, hourly_neff, hourly_swin, hourly_trc])
 # select one point and output to csv
 df = ds.sel(latitude=-44.075, longitude=169.425, method='nearest').to_pandas()
 # tidy up
-df = df.drop(labels='inplace', axis='columns')
+# df = df.drop(labels='inplace', axis='columns')
 
 # first add the timezone info, then convert to NZST
 df['NZST'] = df.index.tz_localize(tz='UTC').tz_convert(tz=dt.timezone(dt.timedelta(hours=12)))
