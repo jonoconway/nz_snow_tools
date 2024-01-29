@@ -52,11 +52,11 @@ lat_to_take = [-44.075, -44.125]
 lon_to_take = [169.425, 169.475]
 
 first_time = dt.datetime(1972, 4, 1, 1, 0, tzinfo=dt.timezone(dt.timedelta(hours=12)))
-last_time = dt.datetime(2023, 4, 1, 0, 0, tzinfo=dt.timezone(dt.timedelta(hours=12)))
+last_time = dt.datetime(2023, 6, 1, 0, 0, tzinfo=dt.timezone(dt.timedelta(hours=12)))
 out_dt = pd.date_range(first_time, last_time, freq='1H').to_pydatetime()
 
 first_time_lt = dt.datetime(1972, 4, 1, 1, 0) # local time version
-last_time_lt = dt.datetime(2023, 4, 1, 0, 0)
+last_time_lt = dt.datetime(2023, 6, 1, 0, 0)
 out_dt_lt = pd.date_range(first_time_lt, last_time_lt, freq='1H').to_pydatetime()
 
 outfile = met_out_folder + '/met_inp_{}_{}_{}.dat'.format(data_id, first_time_lt.strftime('%Y%m%d%H%M'), last_time_lt.strftime('%Y%m%d%H%M'))
@@ -109,7 +109,8 @@ ds_precip = ds_precip.assign(rain_bc=ds_precip['rain'].copy(data=precip_QMAP)) #
 
 # ds_wind_QMAP = xr.load_dataset("C:/Users/conwayjp/OneDrive - NIWA/projects/MarsdenFS2018/Nariefa/vcsn/to share/update_to_aug_2023/wind_QMAP.nc")
 df_wind_QMAP = pd.read_csv("C:/Users/conwayjp/OneDrive - NIWA/projects/MarsdenFS2018/Nariefa/vcsn/to share/update_to_aug_2023/qmap_wind_processed.csv")
-wind_QMAP = np.zeros((ds_ws['wind'].shape[0], 2, 2)) # set up array with extra dimensions then copy data in
+mean_annual_ws = 3.3 # use mean annual wind speed when VCSN not available prior to 2000
+wind_QMAP = np.zeros((ds_ws['wind'].shape[0], 2, 2)) + mean_annual_ws # set up array with extra dimensions then copy data in
 for i in range(2):
     for j in range(2):
         wind_QMAP[10226:, i, j] = df_wind_QMAP['wind'].values # 10226:
