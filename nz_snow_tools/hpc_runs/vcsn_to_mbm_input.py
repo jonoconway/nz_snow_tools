@@ -293,7 +293,7 @@ print()
 df = pd.read_csv('C:/Users/conwayjp/OneDrive - NIWA/projects/MarsdenFS2018/Nariefa/vcsn/met_inp_brewster_full_mbm_197204010100_202306010000.dat')
 df2 = pd.read_csv('C:/Users/conwayjp/OneDrive - NIWA/projects/MarsdenFS2018/Nariefa/vcsn/to share/met_inp_brewster_full_mbm_197204010100_202104010000.dat')
 df3 = df.copy()
-df3.update(df2)
+df3.update(df2.drop(labels='wind',axis=1))
 df3.to_csv('C:/Users/conwayjp/OneDrive - NIWA/projects/MarsdenFS2018/Nariefa/vcsn/to share/update_to_aug_2023/met_inp_brewster_full_mbm_197204010100_202306010000_consistent_with_2021version.dat',index=False)
 
 df.precip.cumsum().plot()
