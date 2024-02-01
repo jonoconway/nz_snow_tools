@@ -51,17 +51,24 @@ target_elevation = 1650 # elevation to generate temperature and pressure output 
 lat_to_take = [-44.075, -44.125]
 lon_to_take = [169.425, 169.475]
 
-first_time = dt.datetime(1972, 4, 1, 1, 0, tzinfo=dt.timezone(dt.timedelta(hours=12)))
-last_time = dt.datetime(2023, 6, 1, 0, 0, tzinfo=dt.timezone(dt.timedelta(hours=12)))
-out_dt = pd.date_range(first_time, last_time, freq='1H').to_pydatetime()
-
+# choose start and end times (in NZST),
 first_time_lt = dt.datetime(1972, 4, 1, 1, 0) # local time version
 last_time_lt = dt.datetime(2023, 6, 1, 0, 0)
-out_dt_lt = pd.date_range(first_time_lt, last_time_lt, freq='1H').to_pydatetime()
+out_dt_lt = pd.date_range(first_time_lt, last_time_lt, freq='1H').to_pydatetime() # naive datetime list
+
+# add timezone info and print time output range
+first_time_tz = pd.to_datetime(first_time_lt).tz_localize(tz=dt.timezone(dt.timedelta(hours=12))).to_pydatetime()
+last_time_tz = pd.to_datetime(last_time_lt).tz_localize(tz=dt.timezone(dt.timedelta(hours=12))).to_pydatetime()
+
+print('time output from {} to {}'.format(first_time_tz.isoformat(), last_time_tz.isoformat()))
+
+# convert to datetime64 in UTC for reading netCDF
+first_time_dt64 = pd.to_datetime(first_time_lt).tz_localize(tz=dt.timezone(dt.timedelta(hours=12))).tz_convert(tz='UTC').to_datetime64()
+last_time_dt64 = pd.to_datetime(last_time_lt).tz_localize(tz=dt.timezone(dt.timedelta(hours=12))).tz_convert(tz='UTC').to_datetime64()
+
 
 outfile = met_out_folder + '/met_inp_{}_{}_{}.dat'.format(data_id, first_time_lt.strftime('%Y%m%d%H%M'), last_time_lt.strftime('%Y%m%d%H%M'))
 
-print('time output from {} to {}'.format(first_time.isoformat(), last_time.isoformat()))
 
 # define location of original vcsn input files
 # vcsn_folder = '/scale_wlg_persistent/filesets/project/niwa00026/VCSN_grid'
@@ -121,28 +128,29 @@ print('load variables')
 #TODO Jan 2024 for some reason xarray is not reading the timestamps as time zone aware - datetime64[ns] 1972-01-01T21:00:00,
 # This throwing errors when comparing to first_time e.g. datetime.datetime(1972, 4, 1, 1, 0, tzinfo=datetime.timezone(datetime.timedelta(seconds=43200)))
 # https://numpy.org/doc/stable/reference/arrays.datetime.html
-# the behaviour is still as expected, with the data being the same produced in ealier versions.
+# the behaviour is still as expected, with the data being the same produced in earlier versions.
 # >>>np.datetime64(first_time)
 # <input>:1: DeprecationWarning: parsing timezone aware datetimes is deprecated; this will raise an error in the future
 # numpy.datetime64('1972-03-31T13:00:00.000000')
+# when using first_time_lt to create slice, the code takes data from one day later.
 
 # take day either side for tmax,tmin,rh,mslp, as well as offsetting tmax forward one day and also taking one extra day for precip. SW and ws are already midnight-midnight
-inp_precip = ds_precip['rain_bc'].sel(time=slice(first_time_lt, last_time_lt + dt.timedelta(days=1)), longitude=lon_to_take,
-                                   latitude=lat_to_take)  # also take value from next day as is total over previous 24 hours
-inp_tmax = ds_tmax['tmax'].sel(time=slice(first_time, last_time + dt.timedelta(days=2)), longitude=lon_to_take,
+inp_precip = ds_precip['rain_bc'].sel(time=slice(first_time_dt64, last_time_dt64 + np.timedelta64(1,'D')), longitude=lon_to_take,
+                                      latitude=lat_to_take)  # also take value from next day as is total over previous 24 hours
+inp_tmax = ds_tmax['tmax'].sel(time=slice(first_time_dt64, last_time_dt64 + np.timedelta64(2,'D')), longitude=lon_to_take,
                                latitude=lat_to_take)  # take value from next day as is the max value over previous 24 hours.
-inp_tmin = ds_tmin['tmin'].sel(time=slice(first_time - dt.timedelta(days=1), last_time + dt.timedelta(days=1)), longitude=lon_to_take,
+inp_tmin = ds_tmin['tmin'].sel(time=slice(first_time_dt64 - np.timedelta64(1,'D'), last_time_dt64 + np.timedelta64(1,'D')), longitude=lon_to_take,
                                latitude=lat_to_take)  # take day either side
-inp_rh = ds_rh['rh'].sel(time=slice(first_time - dt.timedelta(days=1), last_time + dt.timedelta(days=1)), longitude=lon_to_take,
+inp_rh = ds_rh['rh'].sel(time=slice(first_time_dt64 - np.timedelta64(1,'D'), last_time_dt64 + np.timedelta64(1,'D')), longitude=lon_to_take,
                          latitude=lat_to_take)  # take a day either side to interpolate
-inp_mslp = ds_mslp['mslp'].sel(time=slice(first_time - dt.timedelta(days=1), last_time + dt.timedelta(days=1)), longitude=lon_to_take,
+inp_mslp = ds_mslp['mslp'].sel(time=slice(first_time_dt64 - np.timedelta64(1,'D'), last_time_dt64 + np.timedelta64(1,'D')), longitude=lon_to_take,
                                latitude=lat_to_take)  # take a day either side to interpolate
-inp_swin = ds_swin['srad'].sel(time=slice(first_time, last_time), longitude=lon_to_take,
+inp_swin = ds_swin['srad'].sel(time=slice(first_time_dt64, last_time_dt64), longitude=lon_to_take,
                                latitude=lat_to_take)  # data actually averages from midnight to midnight, so modify timestamp
 updated_time = inp_swin.time + np.timedelta64(15, 'h')
 inp_swin = inp_swin.assign_coords(time=('time', updated_time.data))
-inp_ws = ds_ws['wind_bc'].sel(time=slice(first_time - dt.timedelta(days=1), last_time), longitude=lon_to_take,
-                           latitude=lat_to_take)  # take extra day on start to make interpolation easier. data actually averages from midnight to midnight, so modify timestamp
+inp_ws = ds_ws['wind_bc'].sel(time=slice(first_time_dt64 - np.timedelta64(1,'D'), last_time_dt64), longitude=lon_to_take,
+                              latitude=lat_to_take)  # take extra day on start to make interpolation easier. data actually averages from midnight to midnight, so modify timestamp
 updated_time = inp_ws.time + np.timedelta64(15, 'h')  # move timestamp to midnight at end of day.
 inp_ws = inp_ws.assign_coords(time=('time', updated_time.data))
 
@@ -252,7 +260,7 @@ hourly_swin = daily_to_hourly_swin_grids_new(hi_res_swin.data, hi_res_lats, hi_r
 hourly_ws = hi_res_ws.resample(time="1H").bfill()[1:]  # fill in average value and remove first timestamp
 
 # merge into one dataset
-hourly_precip = xr.DataArray(hourly_precip, hourly_rh.coords, name='precip')
+hourly_precip = xr.DataArray(hourly_precip, hourly_rh.coords, name='precip') # use rh as rh has hourly dt.
 hourly_temp = xr.DataArray(hourly_temp, hourly_rh.coords, name='tempC')
 hourly_swin = xr.DataArray(hourly_swin, hourly_rh.coords, name='swin')
 
@@ -275,7 +283,7 @@ df = df.reindex(columns=['year', 'month', 'doy', 'hour', 'precip', 'tempC', 'rh'
 df.round(4).to_csv(outfile)
 
 pickle.dump(day_weightings_full,
-            open(met_out_folder + '/met_inp_{}_{}_{}_daywts.pkl'.format(data_id, first_time.strftime('%Y%m%d%H%M'), last_time.strftime('%Y%m%d%H%M')),
+            open(met_out_folder + '/met_inp_{}_{}_{}_daywts.pkl'.format(data_id, first_time_lt.strftime('%Y%m%d%H%M'), last_time_lt.strftime('%Y%m%d%H%M')),
                  'wb'), protocol=3)
 
 print()

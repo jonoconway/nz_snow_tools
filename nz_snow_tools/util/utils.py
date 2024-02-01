@@ -285,6 +285,7 @@ def daily_to_hourly_swin_grids_new(swin_grid, lats, lons, hourly_dt, single_dt=F
     converts daily mean SW into hourly using TOA rad, applying
 
     :param hi_res_sw_rad: daily sw in data with dimension [time,y,x]
+    :param hourly_dt timezone naive datetime
     :return:
     """
     if single_dt == True:  # assume is 2d and add a time dimension on the start
@@ -460,7 +461,7 @@ def calc_toa(lat_ref, lon_ref, hourly_dt):
     calculate top of atmopshere radiation for given lat, lon and datetime
     :param lat_ref:
     :param lon_ref:
-    :param hourly_dt:
+    :param hourly_dt: timezone naive datetime that is in the local_time as specified by the timezone variable
     :return:
     """
     dtstep = (hourly_dt[1] - hourly_dt[0]).total_seconds()
