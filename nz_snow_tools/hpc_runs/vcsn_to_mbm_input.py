@@ -39,7 +39,7 @@ def find_pressure_offset_elevation(elev_in, elev_out):
     return pres_in - pres_out
 
 
-sys.path.append('C:/Users/conwayjp/Documents/code/git_niwa_local/cloudglacier')
+sys.path.append('C:/Users/conwayjp/code/git_niwa_local/cloudglacier')
 from obj1.process_cloud_vcsn import process_daily_swin_to_cloud, ea_from_tc_rh
 
 
