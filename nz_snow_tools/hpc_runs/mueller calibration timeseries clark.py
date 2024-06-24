@@ -18,33 +18,33 @@ model = 'clark'
 # configuration dictionary containing model parameters.
 config = {}
 config['num_secs_output'] = 3600
-config['tacc'] = 274.15 # default 274.15
-config['tmelt'] = 273.15 # default 273.15
+config['tacc'] = 274.0 # default 274.15
+config['tmelt'] = 274.0 # default 273.15
 
 # clark2009 melt parameters
-config['mf_mean'] = 4# default 5
-config['mf_amp'] = 2.5 # default 5
-config['mf_alb'] = 1.5 # default 2.5
-config['mf_alb_decay'] = 5 # default 5 (clark) or 1 (topnet) # timescale for adjustment (after this time effect will be 37% of full effect)
-config['mf_ros'] = 4 # default 2.5 (clark) or 0 (topnet)
-config['mf_doy_max_ddf'] = 356  # default 356
-config['mf_doy_min_ddf'] = 173 # default 173 (clark) or 210 (topnet)
+config['mf_mean'] = 4# default 5, new 4
+config['mf_amp'] = 2.5 # default 5, new 2.5
+config['mf_alb'] = 1.5 # default 2.5, new 1.5
+config['mf_alb_decay'] = 5 # default 5 (clark) or 1 (topnet), new 5 # timescale for adjustment (after this time effect will be 37% of full effect)
+config['mf_ros'] = 4 # default 2.5 (clark) or 0 (topnet), new 4
+config['mf_doy_max_ddf'] = 356  # default 356, new 356
+config['mf_doy_min_ddf'] = 173 # default 173 (clark) or 210 (topnet), new 173
 #
 # # dsc_snow melt parameters
-# config['tf'] = 0.04 * 24  # hamish 0.13. ruschle 0.04, pelliciotti 0.05
-# config['rf'] = 0.0108 * 24  # hamish 0.0075,ruschle 0.009, pelliciotti 0.0094 # ruschle before 1 Oct 0.157. theoretical 0.0108
-# # dsc_snow albedo parameters
-# config['tc'] = 10
-# config['a_ice'] = 0.42
-# config['a_freshsnow'] = 0.85
-# config['a_firn'] = 0.5
-# config['dc'] = 11.0
-# config['alb_swe_thres'] = 10
-# config['ros'] = False
-# config['ta_m_tt'] = False
+config['tf'] = 0.04 * 24  # hamish 0.13. ruschle 0.04, pelliciotti 0.05
+config['rf'] = 0.0108 * 24  # hamish 0.0075,ruschle 0.009, pelliciotti 0.0094 # ruschle before 1 Oct 0.157. theoretical 0.0108
+# dsc_snow albedo parameters
+config['tc'] = 10
+config['a_ice'] = 0.42
+config['a_freshsnow'] = 0.85
+config['a_firn'] = 0.5
+config['dc'] = 11.0
+config['alb_swe_thres'] = 10
+config['ros'] = False
+config['ta_m_tt'] = False
 
 # load input data for mueller hut
-infile = 'C:/Users/conwayjp/OneDrive - NIWA/projects/SIN_density_SIP/input_met/mueller_hut_met_20170501_20200401_with_hs_swe_rain_withcloud_precip_harder_update1.pkl'
+infile = 'C:/Users/conwayjp/OneDrive - NIWA/projects/FWWR_SIN/data processing/point_model_inputs/mueller_hut/mueller_hut_met_20170501_20200401_with_hs_swe_rain_withcloud_precip_harder_update1.pkl'
 aws_df = pkl.load(open(infile, 'rb'))
 start_t = 0
 end_t = 15840
@@ -105,9 +105,10 @@ plt.close()
 if model == 'clark':
     st_swe1, st_melt1, st_acc1, st_alb1 = snow_main_simple(inp_ta + 1, inp_precip, inp_doy, inp_hourdec, dtstep=3600, init_swe=init_swe,
                                                        init_d_snow=init_d_snow, inp_sw=inp_sw, which_melt='clark2009', **config)
-# if model == 'clark':
-#     st_swe1, st_melt1, st_acc1, st_alb1 = snow_main_simple(inp_ta, inp_precip * 1.10, inp_doy, inp_hourdec, dtstep=3600, init_swe=init_swe,
-#                                                        init_d_snow=init_d_snow, inp_sw=inp_sw, which_melt='clark2009', **config)
+
+elif model == 'eti':
+    st_swe1, st_melt1, st_acc1, st_alb1 = snow_main_simple(inp_ta + 1, inp_precip, inp_doy, inp_hourdec, dtstep=3600, init_swe=init_swe,
+                                                       init_d_snow=init_d_snow, inp_sw=inp_sw, which_melt='dsc_snow', **config)
 
 swe = st_swe.mean()
 swe1 = st_swe1.mean()
@@ -136,6 +137,11 @@ if model == 'clark':
                                                                init_d_snow=init_d_snow, inp_sw=inp_sw, which_melt='clark2009', **config)
     st_swe1, st_melt1, st_acc1, st_alb1 = snow_main_simple(inp_ta + 3, inp_precip, inp_doy, inp_hourdec, dtstep=3600, init_swe=init_swe,
                                                        init_d_snow=init_d_snow, inp_sw=inp_sw, which_melt='clark2009', **config)
+elif model == 'eti':
+    st_swe, st_melt, st_acc, st_alb = snow_main_simple(inp_ta + 2, inp_precip, inp_doy, inp_hourdec, dtstep=3600, init_swe=init_swe,
+                                                       init_d_snow=init_d_snow, inp_sw=inp_sw, which_melt='dsc_snow', **config)
+    st_swe1, st_melt1, st_acc1, st_alb1 = snow_main_simple(inp_ta + 3, inp_precip, inp_doy, inp_hourdec, dtstep=3600, init_swe=init_swe,
+                                                       init_d_snow=init_d_snow, inp_sw=inp_sw, which_melt='dsc_snow', **config)
 
 print('simulation for 400 m lower')
 swe = st_swe.mean()
@@ -151,3 +157,8 @@ print('SCD +1K {:.1f}'.format(scd1))
 print('dSCD {:.1f}'.format(scd - scd1))
 print('SWE sensitivity {:.1f}'.format((1 - (swe1 / swe)) * 100))
 print('SCD sensitivity {:.1f}'.format((scd - scd1) / scd * 100))
+
+print('{:.1f}'.format((1 - (swe1/swe))*100))
+print('{:.1f}'.format((1 - (scd1/scd))*100))
+print('{:.1f}'.format((swe-swe1)))
+print('{:.1f}'.format((scd-scd1)))
