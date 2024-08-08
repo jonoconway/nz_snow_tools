@@ -1,30 +1,17 @@
 import os
-
-from setuptools import setup, find_packages
-
-
-PACKAGE_NAME = "nz_snow_tools"
-AUTHOR = "Jono Conway"
-AUTHOR_EMAIL = "jono.conway@niwa.co.nz"
-DESCRIPTION = "Tools to run and evaluate snow models"
-
-
-version = None
-exec(open('nz_snow_tools/version.py').read())
-
+from setuptools import setup
 
 def read(fname):
     return open(os.path.join(os.path.dirname(__file__), fname)).read()
 
-
 setup(
-    name=PACKAGE_NAME,
-    version=version,
-    author=AUTHOR,
-    author_email=AUTHOR_EMAIL,
-    description=DESCRIPTION,
+    name="nz_snow_tools",
+    version="0.1.0",
+    author='Jono Conway',
+    author_email='jono.conway@niwa.co.nz',
+    description='Tools to run and evaluate snow models',
     license="GPL-3.0",
-    packages=find_packages(exclude=["tests"]),
+    packages=["nz_snow_tools"],
     long_description=read('README.rst'),
     url='https://github.com/jonoconway/nz_snow_tools',  # use the URL to the github repo
     download_url='https://github.com/jonoconway/nz_snow_tools/archive/master.zip',
@@ -36,19 +23,8 @@ setup(
         'pillow',
         'pyproj',
         'f90nml',
-        'yaml'
+        'yaml',
+        'scipy',
+        'cartopy'
     ],
-    classifiers=[
-        'Development Status :: 3 - Alpha',
-
-        'Intended Audience :: Developers',
-        'Intended Audience :: Science/Research',
-        'Intended Audience :: System Administrators',
-
-        'Programming Language :: Python :: 3',
-
-        'Topic :: Scientific/Engineering',
-        'Topic :: Scientific/Engineering :: Atmospheric Science'
-    ],
-    keywords='snow climate model evaluation',
 )

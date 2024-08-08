@@ -12,7 +12,7 @@ Install the latest version of the package from github:
 
 https://github.com/jonoconway/nz_snow_tools
 
-once you have downloaded, check the requirements.txt file and install the needed packages. It is safer to use conda, rather than pip to install these. run setup.py to install (checks what other packages are necessary).
+once you have downloaded, check the requirements in setup.py and install the needed packages. It is safer to use conda, rather than pip to install these. run setup.py to install (checks what other packages are necessary).
 
 
 Getting Started
