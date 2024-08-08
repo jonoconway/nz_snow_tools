@@ -7,5 +7,4 @@ pyproj
 f90nml
 scipy
 cartopy
-f90nml
 yaml

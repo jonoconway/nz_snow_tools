@@ -35,7 +35,8 @@ setup(
         'pyshp',
         'pillow',
         'pyproj',
-        'f90nml'
+        'f90nml',
+        'yaml'
     ],
     classifiers=[
         'Development Status :: 3 - Alpha',
@@ -44,7 +45,6 @@ setup(
         'Intended Audience :: Science/Research',
         'Intended Audience :: System Administrators',
 
-        'Programming Language :: Python :: 2',
         'Programming Language :: Python :: 3',
 
         'Topic :: Scientific/Engineering',
