@@ -23,7 +23,7 @@ setup(
         'pillow',
         'pyproj',
         'f90nml',
-        'yaml',
+        'pyyaml',
         'scipy',
         'cartopy'
     ],
