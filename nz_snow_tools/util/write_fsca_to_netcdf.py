@@ -282,17 +282,12 @@ def setup_nztm_grid_netcdf(fname, list_of_data_arrays, var_names, datetime_list,
 
     # add common attributes
     ds.created = strftime("%Y-%m-%d %H:%M:%S", gmtime())
-    if no_time == False:
-        ds.featureType = "timeSeries"
-    else:
-        ds.comment = 'timestamp {}'.format(datetime_list.strftime('%Y%m%d%H%M'))
-
 
     if no_time == False:
         ds.createDimension('time', )
         t = ds.createVariable('time', 'f8', ('time',))
         t.long_name = "time"
-        t.units = 'days since 1900-01-01 00:00:00'
+        t.units = 'hours since 1970-01-01 00:00:00'
         t[:] = nc.date2num(datetime_list, units=t.units)
 
     ds.createDimension('northing', len(northings))

@@ -38,7 +38,7 @@ def convert_unix_time_seconds_to_dt(uts_list):
     """
     dt_list = []
     for i in range(len(uts_list)):
-        dt_list.append(datetime.datetime.utcfromtimestamp(uts_list[i]))
+        dt_list.append(datetime.datetime.fromtimestamp(uts_list[i],datetime.UTC).replace(tzinfo=None))
     return dt_list
 
 
@@ -50,7 +50,7 @@ def make_regular_timeseries(start_dt, stop_dt, num_secs):
     :param num_secs: number of seconds in timestep required
     :return: list of datetime objects between
     """
-    epoch = datetime.datetime.utcfromtimestamp(0)
+    epoch = datetime.datetime.fromtimestamp(0,datetime.UTC).replace(tzinfo=None)
     st = (start_dt - epoch).total_seconds()
     et = (stop_dt - epoch).total_seconds()
     new_timestamp = np.linspace(st, et, int((et - st) / num_secs + 1))
