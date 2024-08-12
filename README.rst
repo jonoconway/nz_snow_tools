@@ -8,11 +8,15 @@ A suite of python code to run and evaluate snow models developed as part of the 
 Installation
 ============
 
-Install the latest version of the package from github:
+download the latest version of the package from github:
 
 https://github.com/jonoconway/nz_snow_tools
 
-once you have downloaded, check the requirements in setup.py and install the needed packages. It is safer to use conda, rather than pip to install these. run setup.py to install (checks what other packages are necessary).
+use pip to install in your environment. You probably want to create a new virtual environment to install into
+
+pip install .
+
+this will check the required packages
 
 
 Getting Started

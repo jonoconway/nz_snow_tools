@@ -1,8 +1,9 @@
 ---
 #yaml file containing configuration options for interp_met_nzcsm
+# if including
 variables:
   air_temp:
-    input_file: "C:/Users/conwayjp/OneDrive - NIWA/projects/CARH2101/tn_file_compilation/nc4_states_nzcsm_2020050107_2020060106_national_hourly_FR7-12.nc"
+    input_file: "C:/Users/conwayjp/OneDrive - NIWA/Temp/nc4_states_nzcsm_2020050107_2020060106_national_hourly_FR7-12.nc"
     input_var_name: "sfc_temp"
     input_time_var: "time0"
     output_name: "sfc_temp"
@@ -11,7 +12,7 @@ variables:
       standard_name: "air_temperature"
       long_name: "air temperature at 1.5m"
   rh:
-    input_file: "C:/Users/conwayjp/OneDrive - NIWA/projects/CARH2101/tn_file_compilation/nc4_states_nzcsm_2020050107_2020060106_national_hourly_FR7-12.nc"
+    input_file: "C:/Users/conwayjp/OneDrive - NIWA/Temp/nc4_states_nzcsm_2020050107_2020060106_national_hourly_FR7-12.nc"
     input_var_name: "sfc_rh"
     input_time_var: "time0"
     output_name: "sfc_rh"
@@ -20,7 +21,7 @@ variables:
       standard_name: "relative_humidity"
       long_name: "relative humidity w.r.t. ice bulb at 1.5m"
   total_precip:
-    input_file: "C:/Users/conwayjp/OneDrive - NIWA/projects/CARH2101/tn_file_compilation/precip_nc4_rain_nzcsm_2020050107_2020060106_national_hourly_FR7-12.nc"
+    input_file: "C:/Users/conwayjp/OneDrive - NIWA/Temp/precip_nc4_rain_nzcsm_2020050107_2020060106_national_hourly_FR7-12.nc"
     input_var_name: "sum_total_precip"
     input_time_var: "time"
     output_name: "total_precip"
@@ -29,7 +30,8 @@ variables:
       standard_name: "precipitation_amount"
       long_name: "sum of rain and lwe snowfall amounts"
     calc_rain_snow_rate: True
-    rain_snow_method: 273.15 # 'harder'
+    rain_snow_method: 'harder' # 'value in K or 'harder'
+    harder_interp_file: 'C:/Users/conwayjp/OneDrive - NIWA/projects/FWWR_SIN/data processing/point_model_inputs/mueller_hut/hydrometeor_temp_lookup.pkl'
     rain_rate_output_meta:
       units: "kg m-2 s-1"
       standard_name: "rainfall_flux"
@@ -40,7 +42,7 @@ variables:
       long_name: "snowfall rate in mm w.e. s-1"
 
   solar_rad:
-    input_file: "C:/Users/conwayjp/OneDrive - NIWA/projects/CARH2101/tn_file_compilation/radiation_nzcsm_2020050107_2020060106_national_hourly_FR7-12.nc"
+    input_file: "C:/Users/conwayjp/OneDrive - NIWA/Temp/nc4_radiation_nzcsm_2020050107_2020060106_national_hourly_FR7-12.nc"
     input_var_name: "sfc_dw_sw_flux"
     input_time_var: "time1"
     output_name: "sfc_dw_sw_flux"
@@ -50,7 +52,7 @@ variables:
       standard_name: "surface_downward_shortwave_flux"
       long_name: "downward shortwave flux at the surface"
   lw_rad:
-    input_file: "C:/Users/conwayjp/OneDrive - NIWA/projects/CARH2101/tn_file_compilation/radiation_nzcsm_2020050107_2020060106_national_hourly_FR7-12.nc"
+    input_file: "C:/Users/conwayjp/OneDrive - NIWA/Temp/nc4_radiation_nzcsm_2020050107_2020060106_national_hourly_FR7-12.nc"
     input_var_name: "sfc_dw_lw_flux"
     input_time_var: "time1"
     output_name: "sfc_dw_lw_flux"
@@ -60,7 +62,7 @@ variables:
       standard_name: "surface_downward_longwave_flux"
       long_name: "downward longwave flux at the surface"
   air_pres:
-    input_file: "C:/Users/conwayjp/OneDrive - NIWA/projects/CARH2101/tn_file_compilation/nc4_states_nzcsm_2020050107_2020060106_national_hourly_FR7-12.nc"
+    input_file: "C:/Users/conwayjp/OneDrive - NIWA/Temp/nc4_states_nzcsm_2020050107_2020060106_national_hourly_FR7-12.nc"
     input_var_name: "sfc_air_press"
     input_time_var: "time0"
     output_name: "sfc_air_press"
@@ -70,7 +72,7 @@ variables:
       long_name: "surface pressure at model surface"
   wind_speed:
     convert_uv: True
-    input_file: "C:/Users/conwayjp/OneDrive - NIWA/projects/CARH2101/tn_file_compilation/nc4_states_nzcsm_2020050107_2020060106_national_hourly_FR7-12.nc"
+    input_file: "C:/Users/conwayjp/OneDrive - NIWA/Temp/nc4_states_nzcsm_2020050107_2020060106_national_hourly_FR7-12.nc"
     input_var_name_u: "sfc_zonal_wind"
     input_var_name_v: "sfc_merid_wind"
     input_time_var: "time0"
@@ -94,8 +96,8 @@ output_grid:
   catchment_mask: 'C:/Users/conwayjp/OneDrive - NIWA/projects/CARH2101/snow reanalysis/MtCook_si_dem_250m.npy'
 
 output_file:
-  output_folder: 'C:/Users/conwayjp/OneDrive - NIWA/projects/CARH2101'
-  file_name_template: '/test_met_interp_{}_{}_wgs84.nc'
+  output_folder: 'C:/Users/conwayjp/OneDrive - NIWA/Temp'
+  file_name_template: '/met_interp_{}_{}_wgs84_harder.nc'
   first_timestamp: '2020-05-04 01:00:00'
   last_timestamp: '2020-05-06 00:00:00'
   timestep: 3600 # timestep of output in seconds

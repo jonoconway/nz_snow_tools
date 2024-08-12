@@ -25,6 +25,6 @@ setup(
         'f90nml',
         'pyyaml',
         'scipy',
-        'cartopy'
+        'cartopy',
     ],
 )

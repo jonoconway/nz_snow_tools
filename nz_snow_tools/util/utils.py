@@ -645,7 +645,10 @@ def basemap_interp(datain, xin, yin, xout, yout, interpolation='NearestNeighbour
     """
 
     # Mesh Coordinates so that they are both 2D arrays
-    xout, yout = np.meshgrid(xout, yout)
+    # xout, yout = np.meshgrid(xout, yout)
+    # ensure that coordiates are both 2D arrays
+    assert xout.shape == yout.shape
+    assert xout.shape.ndim == 2
 
     # compute grid coordinates of output grid.
     xcoords = (len(xin) - 1) * (xout - xin[0]) / (xin[-1] - xin[0])
