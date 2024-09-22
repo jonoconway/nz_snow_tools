@@ -12,8 +12,8 @@ import os
 
 
 dem = 'modis_nz_dem_250m' # identifier for modis grid - extent specified below
-mask_folder = 'C:/Users/conwayjp/OneDrive - NIWA/projects/CACV/2324 MODIS hydro catchments/catchment_masks'  # location of numpy catchment mask. must be writeable if mask_created == False
-catchment_shp_folder = 'C:/Users/conwayjp/OneDrive - NIWA/projects/CACV/2324 MODIS hydro catchments/catchment_shapefiles'  # shapefile containing polyline or polygon of catchment in WGS84
+mask_folder = 'C:/Users/conwayjp/OneDrive - NIWA/projects/CACV/2425 MODIS catchment processing/catchment_masks'  # location of numpy catchment mask. must be writeable if mask_created == False
+catchment_shp_folder = 'C:/Users/conwayjp/OneDrive - NIWA/projects/CACV/2425 MODIS catchment processing/catchment_shapefiles'  # shapefile containing polyline or polygon of catchment in WGS84
 shapefile_proj = 'NZTM' #  projection of shapefile either NZTM of WGS84
 file_type = '.gpkg' # or '.shp'
 # read names of shapefiles
