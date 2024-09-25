@@ -11,14 +11,17 @@ from nz_snow_tools.util.utils import create_mask_from_shpfile, setup_nztm_dem
 import os
 
 
-dem = 'modis_nz_dem_250m' # identifier for modis grid - extent specified below
-mask_folder = 'C:/Users/conwayjp/OneDrive - NIWA/projects/CACV/2425 MODIS catchment processing/catchment_masks'  # location of numpy catchment mask. must be writeable if mask_created == False
-catchment_shp_folder = 'C:/Users/conwayjp/OneDrive - NIWA/projects/CACV/2425 MODIS catchment processing/catchment_shapefiles'  # shapefile containing polyline or polygon of catchment in WGS84
+dem = 'nz_dem_250m' # identifier for modis grid - extent specified below
+mask_folder = 'C:/Users/conwayjp/OneDrive - NIWA/projects/Snowmelt forecast/catchment_masks'  # location of numpy catchment mask. must be writeable if mask_created == False
+catchment_shp_folder = '//niwa.local/projects/christchurch/MEL21519/Working/GIS_dn2_st3/catchment_shapefiles/'  # shapefile containing polyline or polygon of catchment in WGS84
 shapefile_proj = 'NZTM' #  projection of shapefile either NZTM of WGS84
-file_type = '.gpkg' # or '.shp'
+file_type = '.shp' # or '.shp'
 # read names of shapefiles
 contents = os.listdir(catchment_shp_folder)
-shps = [s.split('.')[0] for s in contents if ".gpkg" in s and ".gpkg-" not in s]#or ".shp" in s and ".xml" not in s]
+if file_type == '.gpkg':
+    shps = [s.split('.')[0] for s in contents if ".gpkg" in s and ".gpkg-" not in s]#or ".shp" in s and ".xml" not in s]
+elif file_type == '.shp':
+    shps = [s.split('.')[0] for s in contents if ".shp" in s and ".xml" not in s]
 
 # shps = ['Waitara_DN2_Everett_Park_SH3_basin']
 

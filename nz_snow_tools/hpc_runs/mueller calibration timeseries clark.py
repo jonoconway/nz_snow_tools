@@ -18,13 +18,13 @@ model = 'clark'
 # configuration dictionary containing model parameters.
 config = {}
 config['num_secs_output'] = 3600
-config['tacc'] = 274.0 # default 274.15
-config['tmelt'] = 274.0 # default 273.15
+config['tacc'] = 274.15 # default 274.15
+config['tmelt'] = 273.65 # default 273.15
 
 # clark2009 melt parameters
-config['mf_mean'] = 4# default 5, new 4
-config['mf_amp'] = 2.5 # default 5, new 2.5
-config['mf_alb'] = 1.5 # default 2.5, new 1.5
+config['mf_mean'] = 5# default 5, new 4
+config['mf_amp'] = 1.5 # default 5, new 2.5
+config['mf_alb'] = 2.5 # default 2.5, new 1.5
 config['mf_alb_decay'] = 5 # default 5 (clark) or 1 (topnet), new 5 # timescale for adjustment (after this time effect will be 37% of full effect)
 config['mf_ros'] = 4 # default 2.5 (clark) or 0 (topnet), new 4
 config['mf_doy_max_ddf'] = 356  # default 356, new 356

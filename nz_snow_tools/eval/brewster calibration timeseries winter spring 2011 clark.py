@@ -14,12 +14,12 @@ import matplotlib.dates as mdates
 config = {}
 config['num_secs_output']=1800
 config['tacc'] = 274.15
-config['tmelt'] = 273.15
+config['tmelt'] = 273.65
 
 # clark2009 melt parameters
-config['mf_mean'] = 4
-config['mf_amp'] = 2.5
-config['mf_alb'] = 1.5
+config['mf_mean'] = 5
+config['mf_amp'] = 1.5
+config['mf_alb'] = 2.5
 config['mf_alb_decay'] = 5
 config['mf_ros'] = 4 # default 2.5
 config['mf_doy_max_ddf'] = 356 # default 356
