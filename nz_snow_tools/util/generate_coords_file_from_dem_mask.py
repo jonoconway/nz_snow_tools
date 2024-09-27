@@ -36,9 +36,11 @@ else:  # Get the mask for the region of interest
     wgs84_lats, wgs84_lons, elev, northings, eastings = trim_lat_lon_bounds(mask, lat_array, lon_array, nztm_dem, y_centres, x_centres)
     _, _, trimmed_mask, _, _ = trim_lat_lon_bounds(mask, lat_array, lon_array, mask.copy(), y_centres, x_centres)
 
-output_file = config['output_file']['file_name_template'].format('elev', 'mask')
+output_file = '/coords_dem_mask_{}_{}.nc'.format(config['output_grid']['catchment_name'],config['output_grid']['dem_name'])
 out_nc_file = setup_nztm_grid_netcdf(config['output_file']['output_folder'] + output_file, None, [], None, northings, eastings, wgs84_lats, wgs84_lons,
                                          elev,no_time=True)
-
+t = out_nc_file.createVariable('mask', 'i4', ('northing', 'easting',), zlib=True)  # ,chunksizes=(1, 100, 100)
+t.setncatts( {'long_name': 'model catchment mask'})
+t[:] = trimmed_mask
 
 out_nc_file.close()

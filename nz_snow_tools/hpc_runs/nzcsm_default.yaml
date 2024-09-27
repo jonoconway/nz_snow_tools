@@ -106,14 +106,14 @@ input_grid:
   x_coord_name: 'rlon'
 
 output_grid:
-  dem_name: "modis_nz_dem_250m.npy"
+  dem_name: "modis_nz_dem_250m"
   dem_file: "/nesi/project/uoo04017/jonoconway/modis_nz_dem_250m.npy"
   catchment_name: "ahuriri_test_60" #
-  catchment_mask: '/nesi/project/uoo04017/jonoconway/ahuriri_test_60_modis_nz_dem_250m.npy' # set to 'elev' if you want to make square domain covering the whole catchment.
+  catchment_mask: '/nesi/project/uoo04017/jonoconway/met_input_masks/ahuriri_test_60_modis_nz_dem_250m.npy' # set to 'elev' if you want to make square domain covering the whole catchment.
 
 output_file:
   output_folder: '/nesi/nobackup/niwa00004/jonoconway/FSM_input'
-  file_name_template: '/met_interp_{}_{}_ahuriri_test_60_nztm_harder.nc'
+  file_name_template: '/met_interp_{}_{}_ahuriri_test_60_250m_nztm_harder.nc'
   first_timestamp: '2018-04-01 01:00:00'
   last_timestamp: '2018-12-01 00:00:00'
   timestep: 3600 # timestep of output in seconds
