@@ -90,14 +90,14 @@ input_grid:
   x_coord_name: 'rlon'
 
 output_grid:
-  dem_name: "si_dem_250m"
-  dem_file: "C:/Users/conwayjp/OneDrive - NIWA/Data/GIS_DATA/Topography/DEM_NZSOS/si_dem_250m.tif"
-  catchment_name: "MtCook"
-  catchment_mask: 'C:/Users/conwayjp/OneDrive - NIWA/projects/CARH2101/snow reanalysis/MtCook_si_dem_250m.npy'
+  dem_name: "modis_nz_dem_250m.npy"
+  dem_file: "C:/Users/conwayjp/OneDrive - NIWA/Data/GIS_DATA/Topography/DEM_NZSOS/modis_nz_dem_250m.npy"
+  catchment_name: "Ahuriri_test_60"
+  catchment_mask: 'C:/Users/conwayjp/OneDrive - NIWA/projects/Snowmelt forecast/catchment_masks/ahuriri_test_60_modis_nz_dem_250m.npy' # set to 'elev' if you want to make square domain covering the whole dem file.
 
 output_file:
   output_folder: 'C:/Users/conwayjp/OneDrive - NIWA/Temp'
-  file_name_template: '/met_interp_{}_{}_wgs84_harder.nc'
+  file_name_template: '/met_interp_{}_{}_ahuriri_test_60_nztm_harder.nc'
   first_timestamp: '2020-05-04 01:00:00'
   last_timestamp: '2020-05-06 00:00:00'
   timestep: 3600 # timestep of output in seconds

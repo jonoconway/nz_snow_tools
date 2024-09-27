@@ -50,12 +50,16 @@ print('processing output orogrpahy')
 if config['output_grid']['dem_name'] == 'si_dem_250m':
     nztm_dem, x_centres, y_centres, lat_array, lon_array = setup_nztm_dem(config['output_grid']['dem_file'], extent_w=1.08e6, extent_e=1.72e6, extent_n=5.52e6,
                                                                           extent_s=4.82e6, resolution=250, origin='bottomleft')
-
 elif config['output_grid']['dem_name'] == 'nz_dem_250m':
     nztm_dem, x_centres, y_centres, lat_array, lon_array = setup_nztm_dem(config['output_grid']['dem_file'], extent_w=1.05e6, extent_e=2.10e6, extent_n=6.275e6,
                                                                           extent_s=4.70e6, resolution=250, origin='bottomleft')
+elif config['output_grid']['dem_name'] == 'modis_nz_dem_250m':
+    nztm_dem, x_centres, y_centres, lat_array, lon_array = setup_nztm_dem(config['output_grid']['dem_file'], extent_w=1.085e6, extent_e=2.10e6, extent_n=6.20e6,
+                                                                          extent_s=4.70e6, resolution=250, origin='bottomleft')
+else:
+    print('incorrect dem name specified')
 
-if config['output_grid']['catchment_mask'] == "elev":  # just set mask to all land points
+if config['output_grid']['catchment_mask'] == "elev":  # just set mask to all land points in DEM domain (does not trim to catchment mask first)
     wgs84_lats = lat_array
     wgs84_lons = lon_array
     elev = nztm_dem
@@ -87,7 +91,6 @@ if not os.path.exists(config['output_file']['output_folder']):
     os.makedirs(config['output_file']['output_folder'])
 output_file = config['output_file']['file_name_template'].format(first_time.strftime('%Y%m%d%H%M'), last_time.strftime('%Y%m%d%H%M'))
 out_nc_file = setup_nztm_grid_netcdf(config['output_file']['output_folder'] + output_file, None, [], out_dt, northings, eastings, wgs84_lats, wgs84_lons, elev)
-
 
 # run through each variable
 for var in config['variables'].keys():
@@ -133,7 +136,8 @@ for var in config['variables'].keys():
                 if config['variables']['total_precip']['rain_snow_method'] == 'harder':
                     # load rh #TODO arange variable keys so that t and rh are calculated before rain/snow rate and lw_rad
                     dict_hm = pickle.load(open(config['variables']['total_precip']['harder_interp_file'], 'rb'))
-                    th_interp = interpolate.RegularGridInterpolator((dict_hm['tc'],dict_hm['rh']), dict_hm['th'], method='linear', bounds_error=False, fill_value=None)
+                    th_interp = interpolate.RegularGridInterpolator((dict_hm['tc'], dict_hm['rh']), dict_hm['th'], method='linear', bounds_error=False,
+                                                                    fill_value=None)
 
     # run through each timestep output interpolate data to fine grid
     for ii, dt_t in enumerate(out_dt):
@@ -214,7 +218,7 @@ for var in config['variables'].keys():
                         hi_res_tk = out_nc_file[config['variables']['air_temp']['output_name']][ii, :, :]
                         hi_res_rh = out_nc_file[config['variables']['rh']['output_name']][ii, :, :]
                         hi_res_tc = hi_res_tk - 273.15
-                        th = np.asarray([th_interp([t,r]) for r, t in zip(hi_res_rh.ravel(), hi_res_tc.ravel())]).squeeze().reshape(hi_res_rh.shape)
+                        th = np.asarray([th_interp([t, r]) for r, t in zip(hi_res_rh.ravel(), hi_res_tc.ravel())]).squeeze().reshape(hi_res_rh.shape)
                         b = 2.6300006
                         c = 0.09336
                         hi_res_frs = 1 - (1. / (1 + b * c ** th))  # fraction of snowfall

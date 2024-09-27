@@ -505,12 +505,18 @@ def setup_nztm_dem(dem_file, extent_w=1.2e6, extent_e=1.4e6, extent_n=5.13e6, ex
     """
     from PIL import Image
     if dem_file is not None:
-        nztm_dem = Image.open(dem_file)
-        if origin == 'bottomleft':
-            # np.array(nztm_dem).shape is (1240L, 800L) but origin is in NW corner. Move to SW to align with increasing Easting and northing.
-            nztm_dem = np.flipud(np.array(nztm_dem))
-        if origin == 'topleft':
-            nztm_dem = np.array(nztm_dem)
+        if dem_file.split('.')[-1] == 'tif':
+            nztm_dem = Image.open(dem_file)
+            if origin == 'bottomleft':
+                # origin of image files are in NW corner. Move to SW to align with increasing Easting and northing.
+                nztm_dem = np.flipud(np.array(nztm_dem))
+            if origin == 'topleft':
+                nztm_dem = np.array(nztm_dem)
+        elif dem_file.split('.')[-1] == 'npy':
+            if origin == 'bottomleft':
+                nztm_dem = np.load(dem_file)  # if is numpy array assume it already has origin in bottom left (SW corner)
+            if origin == 'topleft':
+                nztm_dem = np.flipud(np.load(dem_file) )
     else:
         nztm_dem = None
     # extent_w = 1.2e6
