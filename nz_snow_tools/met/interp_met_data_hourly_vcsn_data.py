@@ -161,8 +161,9 @@ def interpolate_met(in_dat, var, in_lons, in_lats, in_elev, out_lons, out_lats, 
 
         out_dat = basemap_interp(in_dat, in_lons, in_lats, XI, YI, interpolation='Bilinear')
         if type(in_dat) == np.ma.core.MaskedArray:
-            out_dat0 = basemap_interp(in_dat, in_lons, in_lats, XI, YI, interpolation='NearestNeighbour')  # nearest neighbour grid to fill edges
-            out_dat[np.where(out_dat.mask)] = out_dat0[np.where(out_dat.mask)]
+            if in_dat.mask != np.False_: # only use if the mask actually exists
+                out_dat0 = basemap_interp(in_dat, in_lons, in_lats, XI, YI, interpolation='NearestNeighbour')  # nearest neighbour grid to fill edges
+                out_dat[np.where(out_dat.mask)] = out_dat0[np.where(out_dat.mask)]
         # mask data at sea level
         # out_dat1[out_elev.data < 1.0] = np.nan # no longer send in a masked array
 
