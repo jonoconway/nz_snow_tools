@@ -27,5 +27,6 @@ setup(
         'scipy',
         'cartopy',
         'geopandas',
+        'fiona',
     ],
 )

@@ -13,9 +13,9 @@ import os
 
 dem = 'modis_nz_dem_250m' # identifier for modis grid - extent specified below
 mask_folder = 'C:/Users/conwayjp/OneDrive - NIWA/projects/Snowmelt forecast/catchment_masks'  # location of numpy catchment mask. must be writeable if mask_created == False
-catchment_shp_folder = '//niwa.local/projects/christchurch/MEL21519/Working/GIS_dn2_st3/catchment_shapefiles/'  # shapefile containing polyline or polygon of catchment in WGS84
+catchment_shp_folder = 'C:/Users/conwayjp/OneDrive - NIWA/projects/Snowmelt forecast/catchment_masks/catchment_shapefiles_spatials/'  # shapefile containing polyline or polygon of catchment in WGS84
 shapefile_proj = 'NZTM' #  projection of shapefile either NZTM of WGS84
-file_type = '.shp' # or '.shp'
+file_type = '.gpkg' # or '.shp'
 # read names of shapefiles
 contents = os.listdir(catchment_shp_folder)
 if file_type == '.gpkg':
@@ -23,7 +23,7 @@ if file_type == '.gpkg':
 elif file_type == '.shp':
     shps = [s.split('.')[0] for s in contents if ".shp" in s and ".xml" not in s]
 
-# shps = ['Waitara_DN2_Everett_Park_SH3_basin']
+# shps = ['Omarama_13184146_catchment']
 
 # calculate model grid etc:
 # output DEM
