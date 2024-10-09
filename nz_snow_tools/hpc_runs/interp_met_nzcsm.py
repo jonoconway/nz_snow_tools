@@ -140,11 +140,11 @@ def interp_met_nzcsm(config_file):
             ind_dt = int(np.where(inp_dt == dt_t)[0][0])
 
             if var == 'lw_rad':
-                # calculate effective emissivity using lwin and air temp, interpolate that, then recreate lw rad with lapsed air temperature.
+                # calculate effective emissivity using lwin and air temp, interpolate that, then recreate lw rad with lapsed air temperature (and/or air temp adjusted for cliamte change offset)
                 input_hourly = inp_nc_var[ind_dt, :, :]
                 input_hourly = input_hourly / (5.67e-8 * inp_nc_var_t[int(np.where(inp_dt_t == dt_t)[0][0]), :, :] ** 4)
                 hi_res_out = interpolate_met(input_hourly.filled(np.nan), var, inp_lons, inp_lats, inp_elev_interp, rlons, rlats, elev, single_dt=True)
-                hi_res_tk = out_nc_file[config['variables']['air_temp']['output_name']][ii, :, :]
+                hi_res_tk = out_nc_file[config['variables']['air_temp']['output_name']][ii, :, :] # loads new air temp adjusted for elevation and optionally climate change scenario
                 hi_res_out = hi_res_out * (5.67e-8 * hi_res_tk ** 4)
             elif var == 'air_pres':  # assumes input data is in Pa
                 # reduce to sea-level - interpolate then raise to new grid.
@@ -226,8 +226,8 @@ def interp_met_nzcsm(config_file):
                             hi_res_frs = (hi_res_tk < config['variables'][var]['rain_snow_method']).astype('float')
                         hi_res_rain_rate = hi_res_out * (1 - hi_res_frs) / config['output_file']['timestep']
                         hi_res_snow_rate = hi_res_out * hi_res_frs / config['output_file']['timestep']
-                        rfr[ii, :, :] = hi_res_rain_rate
-                        sfr[ii, :, :] = hi_res_snow_rate
+                        rfr[ii, :, :] = hi_res_rain_rate.filled(np.nan)
+                        sfr[ii, :, :] = hi_res_snow_rate.filled(np.nan)
                         # plt.figure()
                         # plt.imshow(hi_res_rain_rate, origin='lower')
                         # plt.colorbar()
