@@ -30,7 +30,7 @@ variables:
       standard_name: "precipitation_amount"
       long_name: "sum of rain and lwe snowfall amounts"
     calc_rain_snow_rate: True
-    rain_snow_method: 'harder' # 'value in K or 'harder'
+    rain_snow_method: 274.15 # 'value in K or 'harder'
     harder_interp_file: 'C:/Users/conwayjp/OneDrive - NIWA/projects/FWWR_SIN/data processing/point_model_inputs/mueller_hut/hydrometeor_temp_lookup.pkl'
     rain_rate_output_meta:
       units: "kg m-2 s-1"
@@ -65,6 +65,7 @@ variables:
     input_file: "C:/Users/conwayjp/OneDrive - NIWA/Temp/nc4_states_nzcsm_2020050107_2020060106_national_hourly_FR7-12.nc"
     input_var_name: "sfc_air_press"
     input_time_var: "time0"
+    input_mslp: False
     output_name: "sfc_air_press"
     output_meta:
       units: "Pa"
@@ -92,11 +93,11 @@ input_grid:
 output_grid:
   dem_name: "modis_nz_dem_250m"
   dem_file: "C:/Users/conwayjp/OneDrive - NIWA/Data/GIS_DATA/Topography/DEM_NZSOS/modis_nz_dem_250m.npy"
-  catchment_name: "dn2_str2_lakes_sites_13183460_Ahuriri"
-  catchment_mask: 'C:/Users/conwayjp/OneDrive - NIWA/projects/Snowmelt forecast/catchment_masks/dn2_str2_lakes_sites_13183460_Ahuriri_modis_nz_dem_250m.npy' # set to 'elev' if you want to make square domain covering the whole dem file.
+  catchment_name: "ahuriri_test_100_square_modis_nz_dem_250m"
+  catchment_mask: 'C:/Users/conwayjp/OneDrive - NIWA/projects/Snowmelt forecast/catchment_masks/ahuriri_test_100_square_modis_nz_dem_250m.npy' # set to 'elev' if you want to make square domain covering the whole dem file.
 
 output_file:
-  output_folder: 'C:/Users/conwayjp/OneDrive - NIWA/projects/Snowmelt forecast/catchment_masks/coords_dem_files'
+  output_folder: 'C:/Users/conwayjp/OneDrive - NIWA/Temp'
   file_name_template: '/met_interp_{}_{}_dn2_str2_lakes_sites_13183460_Ahuriri_250m_nztm_274.nc'
   first_timestamp: '2020-05-04 01:00:00'
   last_timestamp: '2020-05-06 00:00:00'

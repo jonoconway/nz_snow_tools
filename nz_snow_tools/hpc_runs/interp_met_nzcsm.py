@@ -146,16 +146,24 @@ def interp_met_nzcsm(config_file):
                 hi_res_out = interpolate_met(input_hourly.filled(np.nan), var, inp_lons, inp_lats, inp_elev_interp, rlons, rlats, elev, single_dt=True)
                 hi_res_tk = out_nc_file[config['variables']['air_temp']['output_name']][ii, :, :] # loads new air temp adjusted for elevation and optionally climate change scenario
                 hi_res_out = hi_res_out * (5.67e-8 * hi_res_tk ** 4)
-            elif var == 'air_pres':  # assumes input data is in Pa
-                # reduce to sea-level - interpolate then raise to new grid.
-                input_hourly = inp_nc_var[ind_dt, :, :]
-                input_hourly = input_hourly + 101325 * (1 - (1 - input_elev / 44307.69231) ** 5.253283)
-                # taken from campbell logger program from Athabasca Glacier
-                # comes from https://s.campbellsci.com/documents/au/manuals/cs106.pdf
-                # U. S. Standard Atmosphere and dry
-                # air were assumed when Equation 3 was derived (Wallace, J. M. and P. V.
-                # Hobbes, 1977: Atmospheric Science: An Introductory Survey, Academic Press,
-                # pp. 59-61).
+            elif var == 'air_pres':  # assumes input data is in Pa. reduce to sea-level (if needed) - interpolate, then raise to new grid.
+                if 'input_mslp' in config['variables']['air_pres'].keys():
+                    if config['variables']['air_pres']['input_mslp'] == True:
+                        input_hourly = inp_nc_var[ind_dt, :, :]
+                    elif config['variables']['air_pres']['input_mslp'] == False:
+                        # reduce to sea-level
+                        input_hourly = inp_nc_var[ind_dt, :, :]
+                        input_hourly = input_hourly + 101325 * (1 - (1 - input_elev / 44307.69231) ** 5.253283)
+                else: # default to input data being at model level
+                    # reduce to sea-level
+                    input_hourly = inp_nc_var[ind_dt, :, :]
+                    input_hourly = input_hourly + 101325 * (1 - (1 - input_elev / 44307.69231) ** 5.253283)
+                    # taken from campbell logger program from Athabasca Glacier
+                    # comes from https://s.campbellsci.com/documents/au/manuals/cs106.pdf
+                    # U. S. Standard Atmosphere and dry
+                    # air were assumed when Equation 3 was derived (Wallace, J. M. and P. V.
+                    # Hobbes, 1977: Atmospheric Science: An Introductory Survey, Academic Press,
+                    # pp. 59-61).
                 hi_res_out = interpolate_met(input_hourly.filled(np.nan), var, inp_lons, inp_lats, inp_elev_interp, rlons, rlats, elev, single_dt=True)
                 hi_res_out = hi_res_out - 101325 * (1 - (1 - elev / 44307.69231) ** 5.253283)
                 if config['variables']['air_pres']['output_meta']['units'] == 'hPa':

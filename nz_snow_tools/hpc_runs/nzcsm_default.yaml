@@ -64,6 +64,7 @@ variables:
     input_file: "/nesi/project/niwa00004/jonoconway/nzcsm_tn_compilation/7-12/states_nzcsm_FR7-12_kupeA.nc"
     input_var_name: "sfc_air_press"
     input_time_var: "time0"
+    input_mslp: False
     output_name: "sfc_air_press"
     output_meta:
       units: "Pa"
