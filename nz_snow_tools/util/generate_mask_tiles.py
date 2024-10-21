@@ -38,10 +38,10 @@ ns = [10, 20, 30, 60, 100, 200] # different x,y domains (km)
 for n in ns:
     minx = 1.32e6
     maxy = 5.12e6
-    maxx = minx + (n * 1e3) + 1e3 # make slightly not square to ensure we don't accidentially rotate at some point.
+    maxx = minx + (n * 1e3) # + 1e3 make slightly not square to ensure we don't accidentially rotate at some point.
     miny = maxy - (n * 1e3)
     mask = np.logical_and(y_centres > miny, y_centres < maxy)[:, np.newaxis] * np.logical_and(x_centres > minx, x_centres < maxx)[np.newaxis, :]
-    np.save(r'C:\Users\conwayjp\OneDrive - NIWA\projects\Snowmelt forecast\catchment_masks\ahuriri_test_{}_{}.npy'.format(n,dem), mask)
+    np.save(r'C:\Users\conwayjp\OneDrive - NIWA\projects\Snowmelt forecast\catchment_masks\ahuriri_test_{}_square_{}.npy'.format(n,dem), mask)
     plt.imshow(mask,origin='lower',alpha=0.2)
 
 plt.show()
