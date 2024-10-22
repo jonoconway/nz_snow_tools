@@ -86,7 +86,7 @@ variables:
 input_grid:
   dem_file: 'C:/Users/conwayjp/OneDrive - NIWA/projects/CARH2101/tn_file_compilation/tn_2020083000-utc_nzcsm_coords.nc'
   dem_var_name: 'orog_model'
-  coord_system: 'rotated pole'
+  coord_system: 'rotated_pole'
   y_coord_name: 'rlat'
   x_coord_name: 'rlon'
 
@@ -98,7 +98,7 @@ output_grid:
 
 output_file:
   output_folder: 'C:/Users/conwayjp/OneDrive - NIWA/Temp'
-  file_name_template: '/met_interp_{}_{}_dn2_str2_lakes_sites_13183460_Ahuriri_250m_nztm_274.nc'
-  first_timestamp: '2020-05-04 01:00:00'
-  last_timestamp: '2020-05-06 00:00:00'
+  file_name_template: '/met_interp_{}_{}_ahuriri_test_100_square_250m_nztm_274.nc'
+  first_timestamp: '2020-05-05 01:00:00'
+  last_timestamp: '2020-05-07 00:00:00'
   timestep: 3600 # timestep of output in seconds

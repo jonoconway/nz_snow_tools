@@ -100,22 +100,22 @@ variables:
 #    percentage_change: 10
 
 input_grid:
-  dem_file: "/nesi/project/niwa00004/jonoconway/nzcsm_tn_compilation/7-12/states_nzcsm_FR7-12_kupeA.nc"
+  dem_file: None # will use coordinates and orog model in each file
   dem_var_name: 'orog_model'
-  coord_system: 'rotated pole'
+  coord_system: 'rotated_pole'
   y_coord_name: 'rlat'
   x_coord_name: 'rlon'
 
 output_grid:
   dem_name: "modis_nz_dem_250m"
   dem_file: "/nesi/project/uoo04017/jonoconway/modis_nz_dem_250m.npy"
-  catchment_name: "ahuriri_test_60" #
-  catchment_mask: '/nesi/project/uoo04017/jonoconway/met_input_masks/ahuriri_test_60_modis_nz_dem_250m.npy' # set to 'elev' if you want to make square domain covering the whole catchment.
+  catchment_name: "ahuriri_test_100_square" #
+  catchment_mask: '/nesi/project/uoo04017/jonoconway/met_input_masks/ahuriri_test_100_square_modis_nz_dem_250m.npy' # set to 'elev' if you want to make square domain covering the whole catchment.
 
 output_file:
   output_folder: '/nesi/nobackup/niwa00004/jonoconway/FSM_input'
-  file_name_template: '/met_interp_{}_{}_ahuriri_test_60_250m_nztm_harder.nc'
-  first_timestamp: '2018-04-01 01:00:00'
-  last_timestamp: '2018-12-01 00:00:00'
+  file_name_template: '/met_interp_{}_{}_ahuriri_test_100_square_250m_nztm_274.nc'
+  first_timestamp: '2018-08-01 01:00:00'
+  last_timestamp: '2018-08-03 00:00:00'
   timestep: 3600 # timestep of output in seconds
 
