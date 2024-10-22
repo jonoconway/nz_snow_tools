@@ -34,19 +34,19 @@ def interp_met_nzcsm(config_file):
 
     if config['input_grid']['dem_file'] == 'none': # if no specific model orography file then open air pressure input variable file and extract coordinate system out of it
         nc_file_orog = nc.Dataset(config['variables']['air_pres']['input_file'], 'r')
-        if config['input_grid']['coord_system'] == 'rotated_pole':
+        if 'rotated' in config['input_grid']['coord_system']:
             rot_pole = nc_file_orog.variables['rotated_pole']
             rot_pole_crs = ccrs.RotatedPole(rot_pole.grid_north_pole_longitude, rot_pole.grid_north_pole_latitude, rot_pole.north_pole_grid_longitude)
         else:
             print('currently only set up for rotated pole')
     else: # config['input_grid']['dem_file'] != 'none': # assume all files have same coordinates and load coordiantes from separte file
         nc_file_orog = nc.Dataset(config['input_grid']['dem_file'], 'r')
-        if config['input_grid']['coord_system'] == 'rotated_pole':
+        if 'rotated' in config['input_grid']['coord_system']:
             rot_pole = nc_file_orog.variables['rotated_pole']
             rot_pole_crs = ccrs.RotatedPole(rot_pole.grid_north_pole_longitude, rot_pole.grid_north_pole_latitude, rot_pole.north_pole_grid_longitude)
         else:
             print('currently only set up for rotated pole')
-        input_elev = nc_file_orog.variables[config['input_grid']['dem_var_name']][:] # for pressure
+        input_elev = nc_file_orog.variables[config['input_grid']['dem_var_name']][:] # needed for pressure
         inp_elev_interp = input_elev.copy()
         # inp_elev_interp = np.ma.fix_invalid(input_elev).data
         inp_lats = nc_file_orog.variables[config['input_grid']['y_coord_name']][:]
@@ -110,15 +110,18 @@ def interp_met_nzcsm(config_file):
         inp_nc_file = nc.Dataset(config['variables'][var]['input_file'], 'r')
 
         if config['input_grid']['dem_file'] == 'none': # load coordinates of each file
-            input_elev = inp_nc_file.variables[config['input_grid']['dem_var_name']][:]  # for pressure
-            inp_elev_interp = input_elev.copy()
             inp_lats = inp_nc_file.variables[config['input_grid']['y_coord_name']][:]
             inp_lons = inp_nc_file.variables[config['input_grid']['x_coord_name']][:]
-            if config['input_grid']['coord_system'] == 'rotated_pole':
+            if 'rotated' in config['input_grid']['coord_system']:
                 rot_pole = inp_nc_file.variables['rotated_pole']
                 assert rot_pole_crs == ccrs.RotatedPole(rot_pole.grid_north_pole_longitude, rot_pole.grid_north_pole_latitude, rot_pole.north_pole_grid_longitude)
             else:
                 print('only set up for rotated pole coordinates')
+            if var in ['air_temp','air_pres']:
+                input_elev = inp_nc_file.variables[config['input_grid']['dem_var_name']][:]  # needed for pressure adjustment
+                inp_elev_interp = input_elev.copy() # needed for air temp
+            else:
+                inp_elev_interp = None
 
         inp_dt = nc.num2date(inp_nc_file.variables[config['variables'][var]['input_time_var']][:],
                             inp_nc_file.variables[config['variables'][var]['input_time_var']].units,
