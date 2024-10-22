@@ -32,7 +32,14 @@ def interp_met_nzcsm(config_file):
 
     print('processing input orogrpahy') # load to get coordinate reference system for interpolation
 
-    if config['input_grid']['dem_file'] is not None: # assume all files have same coordinates
+    if config['input_grid']['dem_file'] == 'none': # if no specific model orography file then open air pressure input variable file and extract coordinate system out of it
+        nc_file_orog = nc.Dataset(config['variables']['air_pres']['input_file'], 'r')
+        if config['input_grid']['coord_system'] == 'rotated_pole':
+            rot_pole = nc_file_orog.variables['rotated_pole']
+            rot_pole_crs = ccrs.RotatedPole(rot_pole.grid_north_pole_longitude, rot_pole.grid_north_pole_latitude, rot_pole.north_pole_grid_longitude)
+        else:
+            print('currently only set up for rotated pole')
+    else: # config['input_grid']['dem_file'] != 'none': # assume all files have same coordinates and load coordiantes from separte file
         nc_file_orog = nc.Dataset(config['input_grid']['dem_file'], 'r')
         if config['input_grid']['coord_system'] == 'rotated_pole':
             rot_pole = nc_file_orog.variables['rotated_pole']
@@ -44,13 +51,7 @@ def interp_met_nzcsm(config_file):
         # inp_elev_interp = np.ma.fix_invalid(input_elev).data
         inp_lats = nc_file_orog.variables[config['input_grid']['y_coord_name']][:]
         inp_lons = nc_file_orog.variables[config['input_grid']['x_coord_name']][:]
-    if config['input_grid']['dem_file'] is not None: # if no specific model orography file then open air pressure input variable file and extract coordinate system out of it
-        nc_file_orog = nc.Dataset(config['variables']['air_pres']['input_file'], 'r')
-        if config['input_grid']['coord_system'] == 'rotated_pole':
-            rot_pole = nc_file_orog.variables['rotated_pole']
-            rot_pole_crs = ccrs.RotatedPole(rot_pole.grid_north_pole_longitude, rot_pole.grid_north_pole_latitude, rot_pole.north_pole_grid_longitude)
-        else:
-            print('currently only set up for rotated pole')
+
     # create dem of model output grid:
     print('processing output orogrpahy')
     if config['output_grid']['dem_name'] == 'si_dem_250m':
@@ -108,7 +109,7 @@ def interp_met_nzcsm(config_file):
         # open input met including model orography (so we can use input on different grids (as long as they keep the same coordinate system)
         inp_nc_file = nc.Dataset(config['variables'][var]['input_file'], 'r')
 
-        if config['input_grid']['dem_file'] is None:
+        if config['input_grid']['dem_file'] == 'none': # load coordinates of each file
             input_elev = inp_nc_file.variables[config['input_grid']['dem_var_name']][:]  # for pressure
             inp_elev_interp = input_elev.copy()
             inp_lats = inp_nc_file.variables[config['input_grid']['y_coord_name']][:]

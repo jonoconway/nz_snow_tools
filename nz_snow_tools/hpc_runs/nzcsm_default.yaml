@@ -100,7 +100,7 @@ variables:
 #    percentage_change: 10
 
 input_grid:
-  dem_file: None # will use coordinates and orog model in each file
+  dem_file: 'none' # will use coordinates and orog model in each file
   dem_var_name: 'orog_model'
   coord_system: 'rotated_pole'
   y_coord_name: 'rlat'
