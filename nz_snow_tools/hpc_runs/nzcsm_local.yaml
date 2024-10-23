@@ -2,6 +2,16 @@
 #yaml file containing configuration options for interp_met_nzcsm
 # if including
 variables:
+  solar_rad:
+    input_file: "C:/Users/conwayjp/OneDrive - NIWA/Temp/nc4_radiation_nzcsm_2020050107_2020060106_national_hourly_FR7-12.nc"
+    input_var_name: "sfc_dw_sw_flux"
+    input_time_var: "time1"
+    output_name: "sfc_dw_sw_flux"
+    round_time: True
+    output_meta:
+      units: "W m-2"
+      standard_name: "surface_downward_shortwave_flux"
+      long_name: "downward shortwave flux at the surface"
   air_temp:
     input_file: "C:/Users/conwayjp/OneDrive - NIWA/Temp/nc4_states_nzcsm_2020050107_2020060106_national_hourly_FR7-12.nc"
     input_var_name: "sfc_temp"
@@ -41,16 +51,7 @@ variables:
       standard_name: "snowfall_flux"
       long_name: "snowfall rate in mm w.e. s-1"
 
-  solar_rad:
-    input_file: "C:/Users/conwayjp/OneDrive - NIWA/Temp/nc4_radiation_nzcsm_2020050107_2020060106_national_hourly_FR7-12.nc"
-    input_var_name: "sfc_dw_sw_flux"
-    input_time_var: "time1"
-    output_name: "sfc_dw_sw_flux"
-    round_time: True
-    output_meta:
-      units: "W m-2"
-      standard_name: "surface_downward_shortwave_flux"
-      long_name: "downward shortwave flux at the surface"
+
   lw_rad:
     input_file: "C:/Users/conwayjp/OneDrive - NIWA/Temp/nc4_radiation_nzcsm_2020050107_2020060106_national_hourly_FR7-12.nc"
     input_var_name: "sfc_dw_lw_flux"
@@ -93,12 +94,14 @@ input_grid:
 output_grid:
   dem_name: "modis_nz_dem_250m"
   dem_file: "C:/Users/conwayjp/OneDrive - NIWA/Data/GIS_DATA/Topography/DEM_NZSOS/modis_nz_dem_250m.npy"
+  slope_grid: 'compute'
+  aspect_grid: 'compute'
   catchment_name: "ahuriri_test_100_square_modis_nz_dem_250m"
   catchment_mask: 'C:/Users/conwayjp/OneDrive - NIWA/projects/Snowmelt forecast/catchment_masks/ahuriri_test_100_square_modis_nz_dem_250m.npy' # set to 'elev' if you want to make square domain covering the whole dem file.
 
 output_file:
   output_folder: 'C:/Users/conwayjp/OneDrive - NIWA/Temp'
-  file_name_template: '/met_interp_{}_{}_ahuriri_test_100_square_250m_nztm_274.nc'
+  file_name_template: '/met_interp_{}_{}_ahuriri_test_100_square_250m_nztm_274_slope.nc'
   first_timestamp: '2020-05-05 01:00:00'
   last_timestamp: '2020-05-07 00:00:00'
   timestep: 3600 # timestep of output in seconds
