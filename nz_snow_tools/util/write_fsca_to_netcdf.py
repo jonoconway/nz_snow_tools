@@ -158,7 +158,7 @@ def create_lat_lons_for_NZTMgrid(extent_w=1.2e6, extent_e=1.4e6, extent_n=5.13e6
     x_centres = np.arange(extent_w + resolution / 2, extent_e, resolution)
     y_centres = np.arange(extent_s + resolution / 2, extent_n, resolution)
     y_array, x_array = np.meshgrid(y_centres, x_centres, indexing='ij')
-    lat_array, lon_array = nztm_to_wgs84(y_array, x_array)
+    lon_array, lat_array = nztm_to_wgs84(y_array, x_array)
     return lat_array, lon_array
 
 

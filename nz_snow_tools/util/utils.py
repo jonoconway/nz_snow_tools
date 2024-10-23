@@ -401,7 +401,7 @@ def nztm_to_wgs84(in_y, in_x):
     updated to pyproj2 style https://pyproj4.github.io/pyproj/stable/gotchas.html#upgrade-transformer
     """
     transformer = Transformer.from_crs('EPSG:2193', 'EPSG:4326')
-    out_x, out_y = transformer.transform(in_x, in_y)
+    out_y, out_x = transformer.transform(in_y, in_x)
     return out_y, out_x
 
 
@@ -410,7 +410,7 @@ def wgs84_to_nztm(in_y, in_x):
     updated to pyproj2 style https://pyproj4.github.io/pyproj/stable/gotchas.html#upgrade-transformer
     """
     transformer = Transformer.from_crs('EPSG:4326','EPSG:2193')
-    out_x, out_y = transformer.transform(in_x, in_y)
+    out_y, out_x = transformer.transform(in_y, in_x)
     return out_y, out_x
 
 
