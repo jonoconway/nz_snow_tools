@@ -35,5 +35,9 @@ setup(
         'cartopy',
         'geopandas',
         'fiona',
+        'xarray',
+        'dask',
+        'distributed',
+        'bokeh',
     ],
 )
