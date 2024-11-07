@@ -19,6 +19,7 @@ import cartopy.crs as ccrs
 from dateutil import parser
 import datetime
 import gc
+import pandas as pd
 import xarray as xr
 import dask.array as da
 import dask
@@ -26,6 +27,7 @@ from dask.distributed import Client
 
 from nz_snow_tools.util.utils import make_regular_timeseries, u_v_from_ws_wd, ws_wd_from_u_v
 from nz_snow_tools.met.interp_met_data_hourly_vcsn_data import interpolate_met, setup_nztm_dem, setup_nztm_grid_netcdf, trim_lat_lon_bounds
+
 
 def process_output_orogrpahy(config, first_time, last_time, rot_pole_crs):
     # create dem of model output grid:
@@ -93,9 +95,23 @@ def get_dataset_dict(config, first_time, last_time):
 
     return dataset_dict
 
+def get_dataset_dict_one_timestep(config, time):
+    dataset_dict = {}
+    # for var in config['variables'].keys():
+    for var in ['air_temp']:
+        with xr.open_dataset(config['variables'][var]['input_file'], decode_times=True) as ds:
+            ds = ds.rename_dims({config['variables'][var]['input_time_var']: 'time'}).rename_vars({config['variables'][var]['input_time_var']: 'time'})
+            dataset_dict[var] = ds.sel(time=time)
+    # dataset_dict['rh'][config['variables']['rh']['input_var_name']] = dataset_dict['rh'][config['variables']['rh']['input_var_name']] * 100  # convert to %
+    # dataset_dict['lw_rad'][config['variables']['lw_rad']['input_var_name']] = dataset_dict['lw_rad'][config['variables']['lw_rad']['input_var_name']] / (5.67e-8 * dataset_dict['air_temp'][config['variables']['air_temp']['input_var_name']] ** 4)
+
+    return dataset_dict
+
 @dask.delayed
-def process_time_step(inp_nc_file, config, i_time, var, inp_lons, inp_lats, inp_elev_interp, out_rlons, out_rlats, elev, output_grid_dict):
-    i_time_step = inp_nc_file[config['variables'][var]['input_var_name']]['time'].isel(time=i_time).values
+def process_time_step(config, i_time, var, inp_lons, inp_lats, inp_elev_interp, out_rlons, out_rlats, elev, output_grid_dict):
+    # read the original data
+    dataset_dict = get_dataset_dict_one_timestep(config, i_time)
+    
     # if var == 'rh':
     #     input_hourly = inp_nc_file[config['variables'][var]['input_var_name']].sel(time=i_time_step).values * 100  # convert to %
     if var == 'wind_speed' or var == 'wind_direction':
@@ -103,11 +119,10 @@ def process_time_step(inp_nc_file, config, i_time, var, inp_lons, inp_lats, inp_
     elif var == 'total_precip':
         pass
     else:
-        input_hourly = inp_nc_file[config['variables'][var]['input_var_name']].sel(time=i_time_step).values
+        input_hourly = dataset_dict[var][config['variables'][var]['input_var_name']].values
     hi_res_out = interpolate_met(input_hourly, var, inp_lons, inp_lats, inp_elev_interp, out_rlons, out_rlats, elev, single_dt=True)
     hi_res_out[output_grid_dict['trimmed_mask'] == 0] = np.nan
     return hi_res_out
-
 
 def process_input_orogrpahy(config):
     print(f"{datetime.datetime.now()}: processing input orogrpahy") # load to get coordinate reference system for interpolation
@@ -142,10 +157,6 @@ def interp_met_nzcsm_time(config_file):
     n_procs = int(os.environ.get("SLURM_CPUS_PER_TASK", '3'))
 
     # 0, set up dask client
-    # memory_target = dask.config.get('distributed.worker.memory.target') # default 0.6
-    # memory_spill = dask.config.get('distributed.worker.memory.spill') # default 0.7
-    # memory_pause = dask.config.get('distributed.worker.memory.pause') # default 0.8
-    # memory_terminate = dask.config.get('distributed.worker.memory.terminate') # default 0.95
     dask.config.set({
         'distributed.worker.memory.target': 0.90,
         'distributed.worker.memory.spill': 0.95,
@@ -160,12 +171,15 @@ def interp_met_nzcsm_time(config_file):
 
         first_time = parser.parse(config['output_file']['first_timestamp'])
         last_time = parser.parse(config['output_file']['last_timestamp'])
+        # Generate a time series of time
+        time_series = pd.date_range(start=first_time, end=last_time, freq=f'{config["output_file"]["timestep"]}s')
+        
 
         # 1, process input orogrpahy
         intput_dict = process_input_orogrpahy(config)
 
-        # 2, read the original data
-        dataset_dict = get_dataset_dict(config, first_time, last_time)
+        # # 2, read the original data
+        # dataset_dict = get_dataset_dict(config, first_time, last_time)
 
         # 3, process output orogrpahy
         out_nc_file, output_grid_dict = process_output_orogrpahy(config, first_time, last_time, intput_dict['rot_pole_crs'])
@@ -175,26 +189,27 @@ def interp_met_nzcsm_time(config_file):
         # for var in config['variables'].keys():
         for var in ['air_temp']:#,'rh','solar_rad','lw_rad']:
             print(f"{datetime.datetime.now()}: processing {var}")
+
+
             # set up variable in output file
             t = out_nc_file.createVariable(config['variables'][var]['output_name'], 'f4', ('time', 'northing', 'easting',), zlib=True)  # ,chunksizes=(1, 100, 100)
             t.setncatts(config['variables'][var]['output_meta'])
 
-            # open input met including model orography (so we can use input on different grids (as long as they keep the same coordinate system)
-            inp_nc_file = dataset_dict[var]
-
-            if config['input_grid']['dem_file'] == 'none': # load coordinates of each file
-                inp_lats = inp_nc_file[config['input_grid']['y_coord_name']].values
-                inp_lons = inp_nc_file[config['input_grid']['x_coord_name']].values
-                if 'rotated' in config['input_grid']['coord_system']:
-                    rot_pole = inp_nc_file['rotated_pole']
-                    assert intput_dict['rot_pole_crs'] == ccrs.RotatedPole(rot_pole.grid_north_pole_longitude, rot_pole.grid_north_pole_latitude, rot_pole.north_pole_grid_longitude)
-                else:
-                    print('only set up for rotated pole coordinates')
-                if var in ['air_temp','air_pres']:
-                    input_elev = inp_nc_file[config['input_grid']['dem_var_name']].values  # needed for pressure adjustment
-                    inp_elev_interp = input_elev.copy() # needed for air temp
-                else:
-                    inp_elev_interp = None
+            # # open input met including model orography (so we can use input on different grids (as long as they keep the same coordinate system)
+            # inp_nc_file = dataset_dict[var]
+            # if config['input_grid']['dem_file'] == 'none': # load coordinates of each file
+            #     inp_lats = inp_nc_file[config['input_grid']['y_coord_name']].values
+            #     inp_lons = inp_nc_file[config['input_grid']['x_coord_name']].values
+            #     if 'rotated' in config['input_grid']['coord_system']:
+            #         rot_pole = inp_nc_file['rotated_pole']
+            #         assert intput_dict['rot_pole_crs'] == ccrs.RotatedPole(rot_pole.grid_north_pole_longitude, rot_pole.grid_north_pole_latitude, rot_pole.north_pole_grid_longitude)
+            #     else:
+            #         print('only set up for rotated pole coordinates')
+            #     if var in ['air_temp','air_pres']:
+            #         input_elev = inp_nc_file[config['input_grid']['dem_var_name']].values  # needed for pressure adjustment
+            #         inp_elev_interp = input_elev.copy() # needed for air temp
+            #     else:
+            #         inp_elev_interp = None
             
             out_rlons = output_grid_dict['out_rlons']
             out_rlats = output_grid_dict['out_rlats']
@@ -205,8 +220,8 @@ def interp_met_nzcsm_time(config_file):
 
             # load variables relevant for interpolation
             if var in ['air_temp']:#,'rh','solar_rad','lw_rad']:
-                num_time_steps = inp_nc_file[config['variables'][var]['input_var_name']].sizes['time']
-                tasks = [process_time_step(inp_nc_file, config, i_time, var, inp_lons, inp_lats, inp_elev_interp, out_rlons, out_rlats, elev, output_grid_dict) for i_time in range(num_time_steps)]
+                # tasks = [process_time_step(inp_nc_file, config, i_time, var, inp_lons, inp_lats, inp_elev_interp, out_rlons, out_rlats, elev, output_grid_dict) for i_time in range(time_series.size)]
+                tasks = [process_time_step(config, i_time, var, inp_lons, inp_lats, inp_elev_interp, out_rlons, out_rlats, elev, output_grid_dict) for i_time in time_series]
                 results = da.compute(*tasks)
                 for i_time, hi_res_out in enumerate(results):
                     t[i_time, :, :] = hi_res_out
