@@ -82,8 +82,7 @@ def process_output_orogrpahy(config, first_time, last_time, rot_pole_crs):
 
 def get_dataset_dict(config, first_time, last_time):
     dataset_dict = {}
-    # for var in config['variables'].keys():
-    for var in ['air_temp', 'rh', 'solar_rad']:
+    for var in config['variables'].keys():
         with xr.open_dataset(config['variables'][var]['input_file'], decode_times=True) as ds:
             ds = ds.rename_dims({config['variables'][var]['input_time_var']: 'time'}).rename_vars({config['variables'][var]['input_time_var']: 'time'})
             dataset_dict[var] = ds.sel(time=slice(first_time, last_time))
@@ -100,6 +99,10 @@ def process_time_step(config, dataset_dict_vars, i_time, var, inp_lons, inp_lats
     try:
         if var == 'rh':
             input_hourly = dataset_dict_timestep[var][config['variables'][var]['input_var_name']].values * 100  # convert to %
+        if var == 'lw_rad':
+            input_hourly = dataset_dict_timestep[var][config['variables'][var]['input_var_name']].values
+            air_temp_hourly = dataset_dict_timestep['air_temp'][config['variables']['air_temp']['input_var_name']].values
+            input_hourly = input_hourly / (5.67e-8 * air_temp_hourly ** 4)
         elif var == 'wind_speed' or var == 'wind_direction':
             pass
         elif var == 'total_precip':
@@ -159,6 +162,13 @@ def process_input_orogrpahy_no_dem_file(config, var, inp_nc_file, intput_dict):
     intput_dict['inp_lons'] = inp_lons
     intput_dict['inp_elev_interp'] = inp_elev_interp
 
+def post_processing_lw_rad(out_nc_file, config, i_time_index):
+    if config['variables']['air_temp']['output_name'] in out_nc_file.variables:
+        air_temp = out_nc_file[config['variables']['air_temp']['output_name']][i_time_index, :, :]
+        hi_res_out = out_nc_file[config['variables']['lw_rad']['output_name']][i_time_index, :, :] * (5.67e-8 * air_temp ** 4)
+    else:
+        hi_res_out = None
+    return i_time_index, hi_res_out
 
 def interp_met_nzcsm_multithread(config_file):
 
@@ -184,7 +194,7 @@ def interp_met_nzcsm_multithread(config_file):
     # 4, run through each variable
 
     # for var in config['variables'].keys():
-    for var in [ 'rh', 'air_temp','solar_rad']:#,'lw_rad''air_temp', ]:
+    for var in [ 'air_temp','lw_rad','rh', 'solar_rad']:
         print(f"{datetime.datetime.now()}: processing {var}")
         # set up variable in output file
         t = out_nc_file.createVariable(config['variables'][var]['output_name'], 'f4', ('time', 'northing', 'easting',), zlib=True)  # ,chunksizes=(1, 100, 100)
@@ -205,21 +215,37 @@ def interp_met_nzcsm_multithread(config_file):
 
         with ThreadPoolExecutor(max_workers=n_procs) as executor:
             dataset_dict_vars = {}
-            if var in ['air_temp','rh','solar_rad']:#,'lw_rad']:
+            if var in ['air_temp','rh','solar_rad']:
                 dataset_dict_vars[var] = dataset_dict[var]
-                futures = [executor.submit(process_time_step, config, dataset_dict_vars, i_time, var, inp_lons, inp_lats, inp_elev_interp, out_rlons, out_rlats, elev, output_grid_dict) for i_time in time_series]
+            elif var == 'lw_rad':
+                dataset_dict_vars[var] = dataset_dict[var]
+                dataset_dict_vars['air_temp'] = dataset_dict['air_temp']
+            futures = [executor.submit(process_time_step, config, dataset_dict_vars, i_time, var, inp_lons, inp_lats, inp_elev_interp, out_rlons, out_rlats, elev, output_grid_dict) for i_time in time_series]
+            # process task results as they are available
+            for future in as_completed(futures):
+                try:
+                    i_time, hi_res_out = future.result()
+                    i_time_index = time_series.get_loc(i_time)
+                    if hi_res_out is not None:
+                        t[i_time_index, :, :] = hi_res_out
+                    # del hi_res_out  # Free memory immediately after use
+                    # gc.collect()  # Explicitly call garbage collection
+                except Exception as e:
+                    print(f"Error processing time step {i_time}: {e}")
+                    continue
+            # post processing
+            if var == 'lw_rad':
+                futures = [executor.submit(post_processing_lw_rad, out_nc_file, config, i_time_index) for i_time_index in range(time_series.size)]
                 # process task results as they are available
                 for future in as_completed(futures):
                     try:
-                        i_time, hi_res_out = future.result()
-                        i_time_index = time_series.get_loc(i_time)
+                        i_time_index, hi_res_out = future.result()
                         if hi_res_out is not None:
                             t[i_time_index, :, :] = hi_res_out
-                        # del hi_res_out  # Free memory immediately after use
-                        # gc.collect()  # Explicitly call garbage collection
                     except Exception as e:
                         print(f"Error processing time step {i_time}: {e}")
                         continue
+
             # # 'lw_rad'
             # air_temp = out_nc_file[config['variables']['air_temp']['output_name']][:, :, :]
             # out_nc_file[config['variables']['lw_rad']['output_name']][:, :, :] = out_nc_file[config['variables']['lw_rad']['output_name']][:, :, :] * (5.67e-8 * air_temp ** 4)
