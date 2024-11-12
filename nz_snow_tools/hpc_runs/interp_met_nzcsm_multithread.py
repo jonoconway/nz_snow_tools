@@ -90,7 +90,7 @@ def get_dataset_dict(config, first_time, last_time):
 
     return dataset_dict
 
-def process_time_step(config, dataset_dict_vars, i_time, var, inp_lons, inp_lats, inp_elev_interp, out_rlons, out_rlats, elev, output_grid_dict):
+def process_time_step(config, dataset_dict_vars, i_time, var, intput_dict, output_grid_dict):
     # read the original data
     dataset_dict_timestep = {}
     for i_vars in dataset_dict_vars.keys():
@@ -99,10 +99,28 @@ def process_time_step(config, dataset_dict_vars, i_time, var, inp_lons, inp_lats
     try:
         if var == 'rh':
             input_hourly = dataset_dict_timestep[var][config['variables'][var]['input_var_name']].values * 100  # convert to %
-        if var == 'lw_rad':
+        elif var == 'lw_rad':
             input_hourly = dataset_dict_timestep[var][config['variables'][var]['input_var_name']].values
             air_temp_hourly = dataset_dict_timestep['air_temp'][config['variables']['air_temp']['input_var_name']].values
             input_hourly = input_hourly / (5.67e-8 * air_temp_hourly ** 4)
+        elif var == 'air_pres':
+            if 'input_mslp' in config['variables']['air_pres'].keys():
+                if config['variables']['air_pres']['input_mslp'] == True:
+                    input_hourly = dataset_dict_timestep[var][config['variables'][var]['input_var_name']].values
+                elif config['variables']['air_pres']['input_mslp'] == False:
+                    # reduce to sea-level
+                    input_hourly = dataset_dict_timestep[var][config['variables'][var]['input_var_name']].values
+                    input_hourly = input_hourly + 101325 * (1 - (1 - intput_dict['input_elev'] / 44307.69231) ** 5.253283)
+            else: # default to input data being at model level
+                # reduce to sea-level
+                input_hourly = dataset_dict_timestep[var][config['variables'][var]['input_var_name']].values
+                input_hourly = input_hourly + 101325 * (1 - (1 - intput_dict['input_elev'] / 44307.69231) ** 5.253283)
+                # taken from campbell logger program from Athabasca Glacier
+                # comes from https://s.campbellsci.com/documents/au/manuals/cs106.pdf
+                # U. S. Standard Atmosphere and dry
+                # air were assumed when Equation 3 was derived (Wallace, J. M. and P. V.
+                # Hobbes, 1977: Atmospheric Science: An Introductory Survey, Academic Press,
+                # pp. 59-61).
         elif var == 'wind_speed' or var == 'wind_direction':
             pass
         elif var == 'total_precip':
@@ -110,9 +128,24 @@ def process_time_step(config, dataset_dict_vars, i_time, var, inp_lons, inp_lats
         else:
             input_hourly = dataset_dict_timestep[var][config['variables'][var]['input_var_name']].values
     except Exception as e:
-        print(f"{i_time}: {config['variables'][var]['input_var_name']} not in {var} dataset")
+        print(f"Error process_time_step {i_time}: {e}")
         return i_time, None
+
+    out_rlons = output_grid_dict['out_rlons']
+    out_rlats = output_grid_dict['out_rlats']
+    elev = output_grid_dict['elev']
+    inp_lons = intput_dict['inp_lons']
+    inp_lats = intput_dict['inp_lats']
+    inp_elev_interp = intput_dict['inp_elev_interp']
+
     hi_res_out = interpolate_met(input_hourly, var, inp_lons, inp_lats, inp_elev_interp, out_rlons, out_rlats, elev, single_dt=True)
+    
+    # post processing
+    if var == 'air_pres':
+        hi_res_out = hi_res_out - 101325 * (1 - (1 - elev / 44307.69231) ** 5.253283)
+        if config['variables']['air_pres']['output_meta']['units'] == 'hPa':
+            hi_res_out /= 100.
+    
     hi_res_out[output_grid_dict['trimmed_mask'] == 0] = np.nan
     return i_time, hi_res_out
 
@@ -137,6 +170,7 @@ def process_input_orogrpahy(config):
             print(' currently only set up for rotated pole')
             
         input_elev = nc_file_orog[config['input_grid']['dem_var_name']].values # needed for pressure
+        intput_dict['input_elev'] = input_elev
         intput_dict['inp_elev_interp'] = input_elev.copy()
         # inp_elev_interp = np.ma.fix_invalid(input_elev).data
         intput_dict['inp_lats'] = nc_file_orog[config['input_grid']['y_coord_name']].values
@@ -160,12 +194,13 @@ def process_input_orogrpahy_no_dem_file(config, var, inp_nc_file, intput_dict):
 
     intput_dict['inp_lats'] = inp_lats
     intput_dict['inp_lons'] = inp_lons
+    intput_dict['input_elev'] = input_elev
     intput_dict['inp_elev_interp'] = inp_elev_interp
 
-def post_processing_lw_rad(out_nc_file, config, i_time_index):
+def post_processing_lw_rad(out_nc_file, config, var, i_time_index):
     if config['variables']['air_temp']['output_name'] in out_nc_file.variables:
         air_temp = out_nc_file[config['variables']['air_temp']['output_name']][i_time_index, :, :]
-        hi_res_out = out_nc_file[config['variables']['lw_rad']['output_name']][i_time_index, :, :] * (5.67e-8 * air_temp ** 4)
+        hi_res_out = out_nc_file[config['variables'][var]['output_name']][i_time_index, :, :] * (5.67e-8 * air_temp ** 4)
     else:
         hi_res_out = None
     return i_time_index, hi_res_out
@@ -194,18 +229,11 @@ def interp_met_nzcsm_multithread(config_file):
     # 4, run through each variable
 
     # for var in config['variables'].keys():
-    for var in [ 'air_temp','lw_rad','rh', 'solar_rad']:
+    for var in ['air_pres','air_temp','lw_rad','rh', 'solar_rad',]:
         print(f"{datetime.datetime.now()}: processing {var}")
         # set up variable in output file
         t = out_nc_file.createVariable(config['variables'][var]['output_name'], 'f4', ('time', 'northing', 'easting',), zlib=True)  # ,chunksizes=(1, 100, 100)
         t.setncatts(config['variables'][var]['output_meta'])
-
-        out_rlons = output_grid_dict['out_rlons']
-        out_rlats = output_grid_dict['out_rlats']
-        elev = output_grid_dict['elev']
-        inp_lons = intput_dict['inp_lons']
-        inp_lats = intput_dict['inp_lats']
-        inp_elev_interp = intput_dict['inp_elev_interp']
 
         # open input met including model orography (so we can use input on different grids (as long as they keep the same coordinate system)
         inp_nc_file = dataset_dict[var]
@@ -213,14 +241,15 @@ def interp_met_nzcsm_multithread(config_file):
         if config['input_grid']['dem_file'] == 'none': # load coordinates of each file
             process_input_orogrpahy_no_dem_file(config, var, inp_nc_file, intput_dict)
 
+        
+        dataset_dict_vars = {}
+        if var in ['air_temp','rh','solar_rad','air_pres']:
+            dataset_dict_vars[var] = dataset_dict[var]
+        elif var == 'lw_rad':
+            dataset_dict_vars[var] = dataset_dict[var]
+            dataset_dict_vars['air_temp'] = dataset_dict['air_temp']
         with ThreadPoolExecutor(max_workers=n_procs) as executor:
-            dataset_dict_vars = {}
-            if var in ['air_temp','rh','solar_rad']:
-                dataset_dict_vars[var] = dataset_dict[var]
-            elif var == 'lw_rad':
-                dataset_dict_vars[var] = dataset_dict[var]
-                dataset_dict_vars['air_temp'] = dataset_dict['air_temp']
-            futures = [executor.submit(process_time_step, config, dataset_dict_vars, i_time, var, inp_lons, inp_lats, inp_elev_interp, out_rlons, out_rlats, elev, output_grid_dict) for i_time in time_series]
+            futures = [executor.submit(process_time_step, config, dataset_dict_vars, i_time, var, intput_dict, output_grid_dict) for i_time in time_series]
             # process task results as they are available
             for future in as_completed(futures):
                 try:
@@ -234,8 +263,8 @@ def interp_met_nzcsm_multithread(config_file):
                     print(f"Error processing time step {i_time}: {e}")
                     continue
             # post processing
-            if var == 'lw_rad':
-                futures = [executor.submit(post_processing_lw_rad, out_nc_file, config, i_time_index) for i_time_index in range(time_series.size)]
+            if var in ['lw_rad']:
+                futures = [executor.submit(post_processing_lw_rad, out_nc_file, config, var, i_time_index) for i_time_index in range(time_series.size)]
                 # process task results as they are available
                 for future in as_completed(futures):
                     try:
@@ -243,7 +272,8 @@ def interp_met_nzcsm_multithread(config_file):
                         if hi_res_out is not None:
                             t[i_time_index, :, :] = hi_res_out
                     except Exception as e:
-                        print(f"Error processing time step {i_time}: {e}")
+                        i_time = time_series[i_time_index]
+                        print(f"Error post processing {i_time}: {e}")
                         continue
 
             # # 'lw_rad'
