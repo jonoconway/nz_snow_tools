@@ -86,8 +86,6 @@ def get_dataset_dict(config, first_time, last_time):
         with xr.open_dataset(config['variables'][var]['input_file'], decode_times=True) as ds:
             ds = ds.rename_dims({config['variables'][var]['input_time_var']: 'time'}).rename_vars({config['variables'][var]['input_time_var']: 'time'})
             dataset_dict[var] = ds.sel(time=slice(first_time, last_time))
-    # dataset_dict['lw_rad'][config['variables']['lw_rad']['input_var_name']] = dataset_dict['lw_rad'][config['variables']['lw_rad']['input_var_name']] / (5.67e-8 * dataset_dict['air_temp'][config['variables']['air_temp']['input_var_name']] ** 4)
-
     return dataset_dict
 
 def process_time_step(config, dataset_dict_vars, i_time, var, intput_dict, output_grid_dict):
@@ -95,14 +93,23 @@ def process_time_step(config, dataset_dict_vars, i_time, var, intput_dict, outpu
     dataset_dict_timestep = {}
     for i_vars in dataset_dict_vars.keys():
         dataset_dict_timestep[i_vars] = dataset_dict_vars[i_vars].sel(time=i_time).load()
-    
+
+    out_rlons = output_grid_dict['out_rlons']
+    out_rlats = output_grid_dict['out_rlats']
+    elev = output_grid_dict['elev']
+    inp_lons = intput_dict['inp_lons']
+    inp_lats = intput_dict['inp_lats']
+    inp_elev_interp = intput_dict['inp_elev_interp']
+
     try:
         if var == 'rh':
             input_hourly = dataset_dict_timestep[var][config['variables'][var]['input_var_name']].values * 100  # convert to %
+            hi_res_out = interpolate_met(input_hourly, var, inp_lons, inp_lats, inp_elev_interp, out_rlons, out_rlats, elev, single_dt=True)
         elif var == 'lw_rad':
             input_hourly = dataset_dict_timestep[var][config['variables'][var]['input_var_name']].values
             air_temp_hourly = dataset_dict_timestep['air_temp'][config['variables']['air_temp']['input_var_name']].values
             input_hourly = input_hourly / (5.67e-8 * air_temp_hourly ** 4)
+            hi_res_out = interpolate_met(input_hourly, var, inp_lons, inp_lats, inp_elev_interp, out_rlons, out_rlats, elev, single_dt=True)
         elif var == 'air_pres':
             if 'input_mslp' in config['variables']['air_pres'].keys():
                 if config['variables']['air_pres']['input_mslp'] == True:
@@ -121,8 +128,31 @@ def process_time_step(config, dataset_dict_vars, i_time, var, intput_dict, outpu
                 # air were assumed when Equation 3 was derived (Wallace, J. M. and P. V.
                 # Hobbes, 1977: Atmospheric Science: An Introductory Survey, Academic Press,
                 # pp. 59-61).
-        elif var == 'wind_speed' or var == 'wind_direction':
-            pass
+            hi_res_out = interpolate_met(input_hourly, var, inp_lons, inp_lats, inp_elev_interp, out_rlons, out_rlats, elev, single_dt=True)
+            hi_res_out = hi_res_out - 101325 * (1 - (1 - elev / 44307.69231) ** 5.253283)
+            if config['variables']['air_pres']['output_meta']['units'] == 'hPa':
+                hi_res_out /= 100.
+        elif var == 'wind_speed':
+            if 'convert_uv' in config['variables'][var].keys():
+                if config['variables'][var]['convert_uv']:
+                    input_hourly_u = dataset_dict_timestep[var][config['variables'][var]['input_var_name_u']].values
+                    input_hourly_v = dataset_dict_timestep[var][config['variables'][var]['input_var_name_v']].values
+                    input_hourly = np.sqrt(input_hourly_u ** 2 + input_hourly_v ** 2)
+            else:
+                input_hourly = dataset_dict_timestep[var][config['variables'][var]['input_var_name']].values
+            hi_res_out = interpolate_met(input_hourly, var, inp_lons, inp_lats, inp_elev_interp, out_rlons, out_rlats, elev, single_dt=True)
+        elif var == 'wind_direction':
+            if 'convert_uv' in config['variables'][var].keys():
+                if config['variables'][var]['convert_uv']:
+                    input_hourly_u = dataset_dict_timestep[var][config['variables'][var]['input_var_name_u']].values
+                    input_hourly_v = dataset_dict_timestep[var][config['variables'][var]['input_var_name_v']].values
+            else:
+                input_hourly_wd = dataset_dict_timestep[var][config['variables'][var]['input_var_name']].values
+                input_hourly_ws = dataset_dict_timestep[var][config['variables']['wind_speed']['input_var_name']].values
+                input_hourly_u, input_hourly_v = u_v_from_ws_wd(input_hourly_ws, input_hourly_wd)
+            hi_res_out_u = interpolate_met(input_hourly_u, var, inp_lons, inp_lats, inp_elev_interp, out_rlons, out_rlats, elev, single_dt=True)
+            hi_res_out_v = interpolate_met(input_hourly_v, var, inp_lons, inp_lats, inp_elev_interp, out_rlons, out_rlats, elev, single_dt=True)
+            hi_res_out = np.rad2deg(np.arctan2(-hi_res_out_u, -hi_res_out_v))
         elif var == 'total_precip':
             pass
         else:
@@ -131,21 +161,6 @@ def process_time_step(config, dataset_dict_vars, i_time, var, intput_dict, outpu
         print(f"Error process_time_step {i_time}: {e}")
         return i_time, None
 
-    out_rlons = output_grid_dict['out_rlons']
-    out_rlats = output_grid_dict['out_rlats']
-    elev = output_grid_dict['elev']
-    inp_lons = intput_dict['inp_lons']
-    inp_lats = intput_dict['inp_lats']
-    inp_elev_interp = intput_dict['inp_elev_interp']
-
-    hi_res_out = interpolate_met(input_hourly, var, inp_lons, inp_lats, inp_elev_interp, out_rlons, out_rlats, elev, single_dt=True)
-    
-    # post processing
-    if var == 'air_pres':
-        hi_res_out = hi_res_out - 101325 * (1 - (1 - elev / 44307.69231) ** 5.253283)
-        if config['variables']['air_pres']['output_meta']['units'] == 'hPa':
-            hi_res_out /= 100.
-    
     hi_res_out[output_grid_dict['trimmed_mask'] == 0] = np.nan
     return i_time, hi_res_out
 
@@ -229,7 +244,7 @@ def interp_met_nzcsm_multithread(config_file):
     # 4, run through each variable
 
     # for var in config['variables'].keys():
-    for var in ['air_pres','air_temp','lw_rad','rh', 'solar_rad',]:
+    for var in ['wind_speed','wind_direction','air_pres','air_temp','lw_rad','rh', 'solar_rad',]:
         print(f"{datetime.datetime.now()}: processing {var}")
         # set up variable in output file
         t = out_nc_file.createVariable(config['variables'][var]['output_name'], 'f4', ('time', 'northing', 'easting',), zlib=True)  # ,chunksizes=(1, 100, 100)
@@ -240,14 +255,14 @@ def interp_met_nzcsm_multithread(config_file):
 
         if config['input_grid']['dem_file'] == 'none': # load coordinates of each file
             process_input_orogrpahy_no_dem_file(config, var, inp_nc_file, intput_dict)
-
         
         dataset_dict_vars = {}
-        if var in ['air_temp','rh','solar_rad','air_pres']:
+        if var in ['wind_speed','wind_direction','air_temp','rh','solar_rad','air_pres']:
             dataset_dict_vars[var] = dataset_dict[var]
         elif var == 'lw_rad':
             dataset_dict_vars[var] = dataset_dict[var]
             dataset_dict_vars['air_temp'] = dataset_dict['air_temp']
+
         with ThreadPoolExecutor(max_workers=n_procs) as executor:
             futures = [executor.submit(process_time_step, config, dataset_dict_vars, i_time, var, intput_dict, output_grid_dict) for i_time in time_series]
             # process task results as they are available
@@ -276,9 +291,6 @@ def interp_met_nzcsm_multithread(config_file):
                         print(f"Error post processing {i_time}: {e}")
                         continue
 
-            # # 'lw_rad'
-            # air_temp = out_nc_file[config['variables']['air_temp']['output_name']][:, :, :]
-            # out_nc_file[config['variables']['lw_rad']['output_name']][:, :, :] = out_nc_file[config['variables']['lw_rad']['output_name']][:, :, :] * (5.67e-8 * air_temp ** 4)
         print(f"{datetime.datetime.now()}: Done")
     out_nc_file.close()
         
