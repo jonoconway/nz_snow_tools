@@ -21,6 +21,8 @@ import datetime
 import gc
 import pandas as pd
 import xarray as xr
+import pickle
+from scipy import interpolate
 from concurrent.futures import ThreadPoolExecutor, as_completed
 
 from nz_snow_tools.util.utils import make_regular_timeseries, u_v_from_ws_wd, ws_wd_from_u_v
@@ -153,15 +155,22 @@ def process_time_step(config, dataset_dict_vars, i_time, var, intput_dict, outpu
             hi_res_out_u = interpolate_met(input_hourly_u, var, inp_lons, inp_lats, inp_elev_interp, out_rlons, out_rlats, elev, single_dt=True)
             hi_res_out_v = interpolate_met(input_hourly_v, var, inp_lons, inp_lats, inp_elev_interp, out_rlons, out_rlats, elev, single_dt=True)
             hi_res_out = np.rad2deg(np.arctan2(-hi_res_out_u, -hi_res_out_v))
-        elif var == 'total_precip':
-            pass
         else:
             input_hourly = dataset_dict_timestep[var][config['variables'][var]['input_var_name']].values
+            hi_res_out = interpolate_met(input_hourly, var, inp_lons, inp_lats, inp_elev_interp, out_rlons, out_rlats, elev, single_dt=True)
     except Exception as e:
         print(f"Error process_time_step {i_time}: {e}")
         return i_time, None
 
     hi_res_out[output_grid_dict['trimmed_mask'] == 0] = np.nan
+
+    if 'climate_change_offsets' in config.keys():
+        if var in config['climate_change_offsets'].keys():
+            if 'percentage_change' in config['climate_change_offsets'][var].keys():
+                hi_res_out = hi_res_out * (100. + config['climate_change_offsets'][var]['percentage_change']) / 100.
+            elif 'absolute_change' in config['climate_change_offsets'][var].keys():
+                hi_res_out = hi_res_out + config['climate_change_offsets'][var]['absolute_change']
+
     return i_time, hi_res_out
 
 def process_input_orogrpahy(config):
@@ -212,6 +221,32 @@ def process_input_orogrpahy_no_dem_file(config, var, inp_nc_file, intput_dict):
     intput_dict['input_elev'] = input_elev
     intput_dict['inp_elev_interp'] = inp_elev_interp
 
+def post_processing_total_precip(out_nc_file, config, var, i_time_index):
+    hi_res_rain_rate = None
+    hi_res_snow_rate = None
+    if 'calc_rain_snow_rate' in config['variables'][var].keys():
+        if config['variables'][var]['calc_rain_snow_rate']:
+            if config['variables'][var]['rain_snow_method'] == 'harder':
+                dict_hm = pickle.load(open(config['variables']['total_precip']['harder_interp_file'], 'rb'))
+                th_interp = interpolate.RegularGridInterpolator((dict_hm['tc'], dict_hm['rh']), dict_hm['th'], method='linear', bounds_error=False,
+                                                                fill_value=None)
+                hi_res_tk = out_nc_file[config['variables']['air_temp']['output_name']][i_time_index, :, :]
+                hi_res_rh = out_nc_file[config['variables']['rh']['output_name']][i_time_index, :, :]
+                hi_res_tc = hi_res_tk - 273.15
+                th = np.asarray([th_interp([t, r]) for r, t in zip(hi_res_rh.ravel(), hi_res_tc.ravel())]).squeeze().reshape(hi_res_rh.shape)
+                b = 2.6300006
+                c = 0.09336
+                hi_res_frs = 1 - (1. / (1 + b * c ** th))  # fraction of snowfall
+                hi_res_frs[hi_res_frs < 0.01] = 0
+                hi_res_frs[hi_res_frs > 0.99] = 1
+            else:
+                hi_res_tk = out_nc_file[config['variables']['air_temp']['output_name']][i_time_index, :, :]
+                hi_res_frs = (hi_res_tk < config['variables'][var]['rain_snow_method']).astype('float')
+            hi_res_out = out_nc_file[config['variables'][var]['output_name']][i_time_index, :, :]
+            hi_res_rain_rate = hi_res_out * (1 - hi_res_frs) / config['output_file']['timestep']
+            hi_res_snow_rate = hi_res_out * hi_res_frs / config['output_file']['timestep']
+    return i_time_index, hi_res_rain_rate, hi_res_snow_rate
+
 def post_processing_lw_rad(out_nc_file, config, var, i_time_index):
     if config['variables']['air_temp']['output_name'] in out_nc_file.variables:
         air_temp = out_nc_file[config['variables']['air_temp']['output_name']][i_time_index, :, :]
@@ -243,12 +278,20 @@ def interp_met_nzcsm_multithread(config_file):
 
     # 4, run through each variable
 
-    # for var in config['variables'].keys():
-    for var in ['wind_speed','wind_direction','air_pres','air_temp','lw_rad','rh', 'solar_rad',]:
+    for var in config['variables'].keys():
         print(f"{datetime.datetime.now()}: processing {var}")
         # set up variable in output file
-        t = out_nc_file.createVariable(config['variables'][var]['output_name'], 'f4', ('time', 'northing', 'easting',), zlib=True)  # ,chunksizes=(1, 100, 100)
-        t.setncatts(config['variables'][var]['output_meta'])
+        t = {}
+        t[var] = out_nc_file.createVariable(config['variables'][var]['output_name'], 'f4', ('time', 'northing', 'easting',), zlib=True)  # ,chunksizes=(1, 100, 100)
+        t[var].setncatts(config['variables'][var]['output_meta'])
+        if var == 'total_precip':
+            if 'calc_rain_snow_rate' in config['variables']['total_precip'].keys():
+                if config['variables']['total_precip']['calc_rain_snow_rate']:
+                    # set up additional outputs
+                    t['snowfall_rate'] = out_nc_file.createVariable('snowfall_rate', 'f4', ('time', 'northing', 'easting',), zlib=True)
+                    t['snowfall_rate'].setncatts(config['variables']['total_precip']['snow_rate_output_meta'])
+                    t['rainfall_rate'] = out_nc_file.createVariable('rainfall_rate', 'f4', ('time', 'northing', 'easting',), zlib=True)
+                    t['rainfall_rate'] .setncatts(config['variables']['total_precip']['rain_rate_output_meta'])
 
         # open input met including model orography (so we can use input on different grids (as long as they keep the same coordinate system)
         inp_nc_file = dataset_dict[var]
@@ -257,10 +300,8 @@ def interp_met_nzcsm_multithread(config_file):
             process_input_orogrpahy_no_dem_file(config, var, inp_nc_file, intput_dict)
         
         dataset_dict_vars = {}
-        if var in ['wind_speed','wind_direction','air_temp','rh','solar_rad','air_pres']:
-            dataset_dict_vars[var] = dataset_dict[var]
-        elif var == 'lw_rad':
-            dataset_dict_vars[var] = dataset_dict[var]
+        dataset_dict_vars[var] = dataset_dict[var]
+        if var == 'lw_rad':
             dataset_dict_vars['air_temp'] = dataset_dict['air_temp']
 
         with ThreadPoolExecutor(max_workers=n_procs) as executor:
@@ -271,7 +312,7 @@ def interp_met_nzcsm_multithread(config_file):
                     i_time, hi_res_out = future.result()
                     i_time_index = time_series.get_loc(i_time)
                     if hi_res_out is not None:
-                        t[i_time_index, :, :] = hi_res_out
+                        t[var][i_time_index, :, :] = hi_res_out
                     # del hi_res_out  # Free memory immediately after use
                     # gc.collect()  # Explicitly call garbage collection
                 except Exception as e:
@@ -290,7 +331,20 @@ def interp_met_nzcsm_multithread(config_file):
                         i_time = time_series[i_time_index]
                         print(f"Error post processing {i_time}: {e}")
                         continue
-
+            # post processing
+            if var in ['total_precip']:
+                futures = [executor.submit(post_processing_total_precip, out_nc_file, config, var, i_time_index) for i_time_index in range(time_series.size)]
+                # process task results as they are available
+                for future in as_completed(futures):
+                    try:
+                        i_time_index, hi_res_rain_rate, hi_res_snow_rate = future.result()
+                        if hi_res_rain_rate is not None and hi_res_snow_rate is not None :
+                            t['snowfall_rate'][i_time_index, :, :] = hi_res_snow_rate
+                            t['rainfall_rate'][i_time_index, :, :] = hi_res_rain_rate
+                    except Exception as e:
+                        i_time = time_series[i_time_index]
+                        print(f"Error post processing {i_time}: {e}")
+                        continue
         print(f"{datetime.datetime.now()}: Done")
     out_nc_file.close()
         
