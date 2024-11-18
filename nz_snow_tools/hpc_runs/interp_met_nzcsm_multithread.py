@@ -276,9 +276,26 @@ def interp_met_nzcsm_multithread(config_file):
     # 3, process output orogrpahy
     out_nc_file, output_grid_dict = process_output_orogrpahy(config, first_time, last_time, intput_dict['rot_pole_crs'])
 
-    # 4, run through each variable
+    # 4.1 confirm the order of processing
+    vars = list(config['variables'].keys())
+    vars_sorted = []
+    if 'air_temp' in vars:
+        vars_sorted.append('air_temp')
+        vars.remove('air_temp')
+    if 'rh' in vars:
+        vars_sorted.append('rh')
+        vars.remove('rh')
+    for var in vars:
+        if var == 'lw_rad' and 'air_temp' not in vars_sorted:
+            print('Error: no air_temp, lw_rad must be processed after air_temp')
+            continue
+        if var == 'total_precip' and ('air_temp' not in vars_sorted or 'rh' not in vars_sorted):
+            print('Error: no air_temp and rh, total_precip must be processed after air_temp and rh')
+            continue
+        vars_sorted.append(var)
 
-    for var in config['variables'].keys():
+    # 4.2, run through each variable
+    for var in vars_sorted:
         print(f"{datetime.datetime.now()}: processing {var}")
         # set up variable in output file
         t = {}
@@ -313,8 +330,6 @@ def interp_met_nzcsm_multithread(config_file):
                     i_time_index = time_series.get_loc(i_time)
                     if hi_res_out is not None:
                         t[var][i_time_index, :, :] = hi_res_out
-                    # del hi_res_out  # Free memory immediately after use
-                    # gc.collect()  # Explicitly call garbage collection
                 except Exception as e:
                     print(f"Error processing time step {i_time}: {e}")
                     continue
