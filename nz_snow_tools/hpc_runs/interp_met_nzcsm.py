@@ -115,12 +115,15 @@ def interp_met_nzcsm(config_file):
         # open input met including model orography (so we can use input on different grids (as long as they keep the same coordinate system)
         inp_nc_file = nc.Dataset(config['variables'][var]['input_file'], 'r')
 
-        if config['input_grid']['dem_file'] == 'none': # load coordinates of each file
+        if config['input_grid']['dem_file'] == 'none': # load coordinates of each file - assumes is in the same coordinate system.
             inp_lats = inp_nc_file.variables[config['input_grid']['y_coord_name']][:]
             inp_lons = inp_nc_file.variables[config['input_grid']['x_coord_name']][:]
             if 'rotated' in config['input_grid']['coord_system']:
                 rot_pole = inp_nc_file.variables['rotated_pole']
-                assert rot_pole_crs == ccrs.RotatedPole(rot_pole.grid_north_pole_longitude, rot_pole.grid_north_pole_latitude, rot_pole.north_pole_grid_longitude)
+                if 'north_pole_grid_longitude' in rot_pole.ncattrs():
+                    assert rot_pole_crs == ccrs.RotatedPole(rot_pole.grid_north_pole_longitude, rot_pole.grid_north_pole_latitude, rot_pole.north_pole_grid_longitude)
+                else:
+                    assert rot_pole_crs == ccrs.RotatedPole(rot_pole.grid_north_pole_longitude, rot_pole.grid_north_pole_latitude)
             else:
                 print('only set up for rotated pole coordinates')
             if var in ['air_temp', 'air_pres']:
