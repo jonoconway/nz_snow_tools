@@ -30,23 +30,23 @@ def interp_met_nzcsm(config_file):
 
     config = yaml.load(open(config_file), Loader=yaml.FullLoader)
 
-    print('processing input orogrpahy') # load to get coordinate reference system for interpolation
+    print('processing input orogrpahy')  # load to get coordinate reference system for interpolation
 
-    if config['input_grid']['dem_file'] == 'none': # if no specific model orography file then open air pressure input variable file and extract coordinate system out of it
+    if config['input_grid']['dem_file'] == 'none':  # if no specific model orography file then open air pressure input variable file and extract coordinate system out of it
         nc_file_orog = nc.Dataset(config['variables']['air_pres']['input_file'], 'r')
         if 'rotated' in config['input_grid']['coord_system']:
             rot_pole = nc_file_orog.variables['rotated_pole']
             rot_pole_crs = ccrs.RotatedPole(rot_pole.grid_north_pole_longitude, rot_pole.grid_north_pole_latitude, rot_pole.north_pole_grid_longitude)
         else:
             print('currently only set up for rotated pole')
-    else: # config['input_grid']['dem_file'] != 'none': # assume all files have same coordinates and load coordiantes from separte file
+    else:  # config['input_grid']['dem_file'] != 'none': # assume all files have same coordinates and load coordiantes from separte file
         nc_file_orog = nc.Dataset(config['input_grid']['dem_file'], 'r')
         if 'rotated' in config['input_grid']['coord_system']:
             rot_pole = nc_file_orog.variables['rotated_pole']
             rot_pole_crs = ccrs.RotatedPole(rot_pole.grid_north_pole_longitude, rot_pole.grid_north_pole_latitude, rot_pole.north_pole_grid_longitude)
         else:
             print('currently only set up for rotated pole')
-        input_elev = nc_file_orog.variables[config['input_grid']['dem_var_name']][:] # needed for pressure
+        input_elev = nc_file_orog.variables[config['input_grid']['dem_var_name']][:]  # needed for pressure
         inp_elev_interp = input_elev.copy()
         # inp_elev_interp = np.ma.fix_invalid(input_elev).data
         inp_lats = nc_file_orog.variables[config['input_grid']['y_coord_name']][:]
@@ -117,7 +117,7 @@ def interp_met_nzcsm(config_file):
                 assert rot_pole_crs == ccrs.RotatedPole(rot_pole.grid_north_pole_longitude, rot_pole.grid_north_pole_latitude, rot_pole.north_pole_grid_longitude)
             else:
                 print('only set up for rotated pole coordinates')
-            if var in ['air_temp','air_pres']:
+            if var in ['air_temp', 'air_pres']:
                 input_elev = inp_nc_file.variables[config['input_grid']['dem_var_name']][:]  # needed for pressure adjustment
                 inp_elev_interp = input_elev.copy() # needed for air temp
             else:
@@ -136,7 +136,7 @@ def interp_met_nzcsm(config_file):
             # load air temperature
             inp_nc_file_t = nc.Dataset(config['variables']['air_temp']['input_file'], 'r')
             inp_dt_t = nc.num2date(inp_nc_file_t.variables[config['variables']['air_temp']['input_time_var']][:],
-                                inp_nc_file_t.variables[config['variables']['air_temp']['input_time_var']].units, only_use_cftime_datetimes=False)
+                                   inp_nc_file_t.variables[config['variables']['air_temp']['input_time_var']].units, only_use_cftime_datetimes=False)
             inp_nc_var_t = inp_nc_file_t.variables[config['variables']['air_temp']['input_var_name']]
         elif var == 'wind_speed' or var == 'wind_direction':
             if 'convert_uv' in config['variables'][var].keys():
@@ -173,7 +173,8 @@ def interp_met_nzcsm(config_file):
                 input_hourly = inp_nc_var[ind_dt, :, :]
                 input_hourly = input_hourly / (5.67e-8 * inp_nc_var_t[int(np.where(inp_dt_t == dt_t)[0][0]), :, :] ** 4)
                 hi_res_out = interpolate_met(input_hourly.filled(np.nan), var, inp_lons, inp_lats, inp_elev_interp, out_rlons, out_rlats, elev, single_dt=True)
-                hi_res_tk = out_nc_file[config['variables']['air_temp']['output_name']][ii, :, :] # loads new air temp adjusted for elevation and optionally climate change scenario
+                # loads new air temp adjusted for elevation and optionally climate change scenario
+                hi_res_tk = out_nc_file[config['variables']['air_temp']['output_name']][ii, :, :]
                 hi_res_out = hi_res_out * (5.67e-8 * hi_res_tk ** 4)
 
             elif var == 'air_pres':  # assumes input data is in Pa. reduce to sea-level (if needed) - interpolate, then raise to new grid.
@@ -209,7 +210,7 @@ def interp_met_nzcsm(config_file):
                 if 'convert_uv' in config['variables'][var].keys():
                     if config['variables'][var]['convert_uv']:
                         input_hourly = np.sqrt(inp_nc_var_u[ind_dt, :, :] ** 2 +
-                                            inp_nc_var_v[ind_dt, :, :] ** 2)
+                                               inp_nc_var_v[ind_dt, :, :] ** 2)
                 else:
                     input_hourly = inp_nc_var[ind_dt, :, :]
                 hi_res_out = interpolate_met(input_hourly.filled(np.nan), var, inp_lons, inp_lats, inp_elev_interp, out_rlons, out_rlats, elev, single_dt=True)
@@ -224,8 +225,10 @@ def interp_met_nzcsm(config_file):
                     input_hourly_ws = inp_nc_var_ws[ind_dt, :, :]
                     input_hourly_u, input_hourly_v = u_v_from_ws_wd(input_hourly_ws, input_hourly_wd)
 
-                hi_res_out_u = interpolate_met(input_hourly_u.filled(np.nan), var, inp_lons, inp_lats, inp_elev_interp, out_rlons, out_rlats, elev, single_dt=True)
-                hi_res_out_v = interpolate_met(input_hourly_v.filled(np.nan), var, inp_lons, inp_lats, inp_elev_interp, out_rlons, out_rlats, elev, single_dt=True)
+                hi_res_out_u = interpolate_met(input_hourly_u.filled(np.nan), var, inp_lons, inp_lats, inp_elev_interp, out_rlons, out_rlats, elev,
+                                               single_dt=True)
+                hi_res_out_v = interpolate_met(input_hourly_v.filled(np.nan), var, inp_lons, inp_lats, inp_elev_interp, out_rlons, out_rlats, elev,
+                                               single_dt=True)
                 hi_res_out = np.rad2deg(np.arctan2(-hi_res_out_u, -hi_res_out_v))
 
             else: # air temperature is lapsed to sea level before interpolation within interpolate_met
@@ -279,6 +282,7 @@ def interp_met_nzcsm(config_file):
                         # plt.show()
 
     out_nc_file.close()
+
 
 if __name__ == '__main__':
     if len(sys.argv) == 2:

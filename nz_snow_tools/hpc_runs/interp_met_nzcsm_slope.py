@@ -60,16 +60,13 @@ def interp_met_nzcsm(config_file):
     print('processing output orogrpahy')
     if config['output_grid']['dem_name'] == 'si_dem_250m':
         nztm_dem, x_centres, y_centres, lat_array, lon_array = setup_nztm_dem(config['output_grid']['dem_file'], extent_w=1.08e6, extent_e=1.72e6,
-                                                                              extent_n=5.52e6,
-                                                                              extent_s=4.82e6, resolution=250, origin='bottomleft')
+                                                                              extent_n=5.52e6, extent_s=4.82e6, resolution=250, origin='bottomleft')
     elif config['output_grid']['dem_name'] == 'nz_dem_250m':
         nztm_dem, x_centres, y_centres, lat_array, lon_array = setup_nztm_dem(config['output_grid']['dem_file'], extent_w=1.05e6, extent_e=2.10e6,
-                                                                              extent_n=6.275e6,
-                                                                              extent_s=4.70e6, resolution=250, origin='bottomleft')
+                                                                              extent_n=6.275e6, extent_s=4.70e6, resolution=250, origin='bottomleft')
     elif config['output_grid']['dem_name'] == 'modis_nz_dem_250m':
         nztm_dem, x_centres, y_centres, lat_array, lon_array = setup_nztm_dem(config['output_grid']['dem_file'], extent_w=1.085e6, extent_e=2.10e6,
-                                                                              extent_n=6.20e6,
-                                                                              extent_s=4.70e6, resolution=250, origin='bottomleft')
+                                                                              extent_n=6.20e6, extent_s=4.70e6, resolution=250, origin='bottomleft')
     else:
         print('incorrect dem name specified')
 
@@ -133,7 +130,7 @@ def interp_met_nzcsm(config_file):
         # open input met including model orography (so we can use input on different grids (as long as they keep the same coordinate system)
         inp_nc_file = nc.Dataset(config['variables'][var]['input_file'], 'r')
 
-        if config['input_grid']['dem_file'] == 'none':  # load coordinates of each file
+        if config['input_grid']['dem_file'] == 'none': # load coordinates of each file
             inp_lats = inp_nc_file.variables[config['input_grid']['y_coord_name']][:]
             inp_lons = inp_nc_file.variables[config['input_grid']['x_coord_name']][:]
             if 'rotated' in config['input_grid']['coord_system']:
@@ -149,8 +146,8 @@ def interp_met_nzcsm(config_file):
                 inp_elev_interp = None
 
         inp_dt = nc.num2date(inp_nc_file.variables[config['variables'][var]['input_time_var']][:],
-                             inp_nc_file.variables[config['variables'][var]['input_time_var']].units,
-                             only_use_cftime_datetimes=False)  # only_use_python_datetimes=True
+                            inp_nc_file.variables[config['variables'][var]['input_time_var']].units,
+                            only_use_cftime_datetimes=False)  # only_use_python_datetimes=True
         if 'round_time' in config['variables'][var].keys():
             if config['variables'][var]['round_time']:
                 inp_hours = nc.date2num(inp_dt, 'hours since 1900-01-01 00:00')
@@ -198,8 +195,8 @@ def interp_met_nzcsm(config_file):
                 input_hourly = inp_nc_var[ind_dt, :, :]
                 input_hourly = input_hourly / (5.67e-8 * inp_nc_var_t[int(np.where(inp_dt_t == dt_t)[0][0]), :, :] ** 4)
                 hi_res_out = interpolate_met(input_hourly.filled(np.nan), var, inp_lons, inp_lats, inp_elev_interp, out_rlons, out_rlats, elev, single_dt=True)
-                hi_res_tk = out_nc_file[config['variables']['air_temp']['output_name']][ii, :,
-                            :]  # loads new air temp adjusted for elevation and optionally climate change scenario
+                # loads new air temp adjusted for elevation and optionally climate change scenario
+                hi_res_tk = out_nc_file[config['variables']['air_temp']['output_name']][ii, :, :]
                 hi_res_out = hi_res_out * (5.67e-8 * hi_res_tk ** 4)
 
             elif var == 'air_pres':  # assumes input data is in Pa. reduce to sea-level (if needed) - interpolate, then raise to new grid.
@@ -210,7 +207,7 @@ def interp_met_nzcsm(config_file):
                         # reduce to sea-level
                         input_hourly = inp_nc_var[ind_dt, :, :]
                         input_hourly = input_hourly + 101325 * (1 - (1 - input_elev / 44307.69231) ** 5.253283)
-                else:  # default to input data being at model level
+                else: # default to input data being at model level
                     # reduce to sea-level
                     input_hourly = inp_nc_var[ind_dt, :, :]
                     input_hourly = input_hourly + 101325 * (1 - (1 - input_elev / 44307.69231) ** 5.253283)
