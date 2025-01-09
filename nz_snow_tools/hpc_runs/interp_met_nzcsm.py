@@ -36,14 +36,20 @@ def interp_met_nzcsm(config_file):
         nc_file_orog = nc.Dataset(config['variables']['air_pres']['input_file'], 'r')
         if 'rotated' in config['input_grid']['coord_system']:
             rot_pole = nc_file_orog.variables['rotated_pole']
-            rot_pole_crs = ccrs.RotatedPole(rot_pole.grid_north_pole_longitude, rot_pole.grid_north_pole_latitude, rot_pole.north_pole_grid_longitude)
+            if 'north_pole_grid_longitude' in rot_pole.ncattrs():
+                rot_pole_crs = ccrs.RotatedPole(rot_pole.grid_north_pole_longitude, rot_pole.grid_north_pole_latitude, rot_pole.north_pole_grid_longitude)
+            else:
+                rot_pole_crs = ccrs.RotatedPole(rot_pole.grid_north_pole_longitude, rot_pole.grid_north_pole_latitude)
         else:
             print('currently only set up for rotated pole')
     else:  # config['input_grid']['dem_file'] != 'none': # assume all files have same coordinates and load coordiantes from separte file
         nc_file_orog = nc.Dataset(config['input_grid']['dem_file'], 'r')
         if 'rotated' in config['input_grid']['coord_system']:
             rot_pole = nc_file_orog.variables['rotated_pole']
-            rot_pole_crs = ccrs.RotatedPole(rot_pole.grid_north_pole_longitude, rot_pole.grid_north_pole_latitude, rot_pole.north_pole_grid_longitude)
+            if 'north_pole_grid_longitude' in rot_pole.ncattrs():
+                rot_pole_crs = ccrs.RotatedPole(rot_pole.grid_north_pole_longitude, rot_pole.grid_north_pole_latitude, rot_pole.north_pole_grid_longitude)
+            else:
+                rot_pole_crs = ccrs.RotatedPole(rot_pole.grid_north_pole_longitude, rot_pole.grid_north_pole_latitude)
         else:
             print('currently only set up for rotated pole')
         input_elev = nc_file_orog.variables[config['input_grid']['dem_var_name']][:]  # needed for pressure
