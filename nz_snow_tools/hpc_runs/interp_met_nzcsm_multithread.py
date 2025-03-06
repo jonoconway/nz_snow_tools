@@ -228,6 +228,7 @@ def process_input_orogrpahy_no_dem_file(config, var, inp_nc_file, intput_dict):
         input_elev = inp_nc_file[config['input_grid']['dem_var_name']].values  # needed for pressure adjustment
         inp_elev_interp = input_elev.copy() # needed for air temp
     else:
+        input_elev = None
         inp_elev_interp = None
 
     intput_dict['inp_lats'] = inp_lats
