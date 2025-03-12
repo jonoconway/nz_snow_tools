@@ -1,0 +1,120 @@
+---
+#yaml file containing configuration options for interp_met_nzcsm
+variables:
+  air_temp:
+    input_file: "/niwa/test/ecox_test/cylc-run/concat-nzcsm/runN/share/data/tn_full_fitz_kupe_maui/air_temperature_nzcsm_national_hourly_FR7-12_tn_compatible.nc"
+    input_var_name: "sfc_temp"
+    input_time_var: "time0"
+    output_name: "sfc_temp"
+    output_meta:
+      units: "K"
+      standard_name: "air_temperature"
+      long_name: "air temperature at 1.5m"
+  rh:
+    input_file: "/niwa/test/ecox_test/cylc-run/concat-nzcsm/runN/share/data/tn_full_fitz_kupe_maui/relative_humidity_nzcsm_national_hourly_FR7-12_tn_compatible.nc"
+    input_var_name: "sfc_rh"
+    input_time_var: "time0"
+    output_name: "sfc_rh"
+    output_meta:
+      units: "%"
+      standard_name: "relative_humidity"
+      long_name: "relative humidity w.r.t. ice bulb at 1.5m"
+  total_precip:
+    input_file: "/niwa/test/ecox_test/cylc-run/concat-nzcsm/runN/share/data/tn_full_fitz_kupe_maui/total_precip_nzcsm_national_hourly_FR7-12_tn_compatible.nc"
+    input_var_name: "sum_total_precip"
+    input_time_var: "time2"
+    output_name: "total_precip"
+    output_meta:
+      units: "kg m-2"
+      standard_name: "precipitation_amount"
+      long_name: "sum of rain and lwe snowfall amounts"
+    calc_rain_snow_rate: True
+    rain_snow_method: 274.15 # 'harder'
+    rain_rate_output_meta:
+      units: "kg m-2 s-1"
+      standard_name: "rainfall_flux"
+      long_name: "rainfall rate in mm w.e. s-1"
+    snow_rate_output_meta:
+      units: "kg m-2 s-1"
+      standard_name: "snowfall_flux"
+      long_name: "snowfall rate in mm w.e. s-1"
+
+  solar_rad:
+    input_file: "/niwa/test/ecox_test/cylc-run/concat-nzcsm/runN/share/data/tn_full_fitz_kupe_maui/solar_radiation_nzcsm_national_hourly_FR7-12_tn_compatible.nc"
+    input_var_name: "sfc_dw_sw_flux"
+    input_time_var: "time1"
+    output_name: "sfc_dw_sw_flux"
+    round_time: True
+    output_meta:
+      units: "W m-2"
+      standard_name: "surface_downward_shortwave_flux"
+      long_name: "downward shortwave flux at the surface"
+  lw_rad:
+    input_file: "/niwa/test/ecox_test/cylc-run/concat-nzcsm/runN/share/data/tn_full_fitz_kupe_maui/longwave_radiation_nzcsm_national_hourly_FR7-12_tn_compatible.nc"
+    input_var_name: "sfc_dw_lw_flux"
+    input_time_var: "time1"
+    output_name: "sfc_dw_lw_flux"
+    round_time: True
+    output_meta:
+      units: "W m-2"
+      standard_name: "surface_downward_longwave_flux"
+      long_name: "downward longwave flux at the surface"
+  air_pres:
+    input_file: "/niwa/test/ecox_test/cylc-run/concat-nzcsm/runN/share/data/tn_full_fitz_kupe_maui/pressure_nzcsm_national_hourly_FR7-12_tn_compatible.nc"
+    input_var_name: "sfc_air_press"
+    input_time_var: "time0"
+    input_mslp: False
+    output_name: "sfc_air_press"
+    output_meta:
+      units: "Pa"
+      standard_name: "air_pressure"
+      long_name: "surface pressure at model surface"
+  wind_speed:
+    convert_uv: True
+    input_file: "/niwa/test/ecox_test/cylc-run/concat-nzcsm/runN/share/data/tn_full_fitz_kupe_maui/wind_nzcsm_national_hourly_FR7-12_tn_compatible.nc"
+    input_var_name_u: "sfc_zonal_wind"
+    input_var_name_v: "sfc_merid_wind"
+    input_time_var: "time0"
+    output_name: "sfc_wind_speed"
+    output_meta:
+      units: "m s-1"
+      standard_name: "wind_speed"
+      long_name: "wind speed at 10m derived from eastward and northward components"
+  wind_direction:
+    convert_uv: True
+    input_file: "/niwa/test/ecox_test/cylc-run/concat-nzcsm/runN/share/data/tn_full_fitz_kupe_maui/wind_nzcsm_national_hourly_FR7-12_tn_compatible.nc"
+    input_var_name_u: "sfc_zonal_wind"
+    input_var_name_v: "sfc_merid_wind"
+    input_time_var: "time0"
+    output_name: "sfc_wind_direction"
+    output_meta:
+      units: "degrees"
+      standard_name: "wind_from_direction"
+      long_name: "wind direction in degrees east of True North derived from interpolated eastward and northward components"
+
+#climate_change_offsets:
+#  air_temp:
+#    absolute_change: 1.5
+#  total_precip:
+#    percentage_change: 10
+
+input_grid:
+  dem_file: 'none' # "/nesi/project/niwa00004/jonoconway/tn_2020083000-utc_nzcsm_coords.nc"
+  dem_var_name: 'orog_model'
+  coord_system: 'rotated_pole'
+  y_coord_name: 'rlat'
+  x_coord_name: 'rlon'
+
+output_grid:
+  dem_name: "modis_nz_dem_250m"
+  dem_file: "/nesi/project/uoo04017/jonoconway/modis_nz_dem_250m.npy"
+  catchment_name: "craigieburn_50_square" # "SI"
+  catchment_mask: '/nesi/project/uoo04017/jonoconway/met_input_masks/craigieburn_50_square_modis_nz_dem_250m.npy' #"elev"
+
+output_file:
+  output_folder: '/nesi/nobackup/niwa00004/jonoconway/FSM_input'
+  file_name_template: '/met_interp_nzra_{}_{}_craigieburn_50_square_modis_nz_dem_250m_nztm_274.15.nc'
+  first_timestamp: '2018-04-01 03:00:00'
+  last_timestamp: '2019-02-01 02:00:00'
+  timestep: 3600 # timestep of output in seconds
+
