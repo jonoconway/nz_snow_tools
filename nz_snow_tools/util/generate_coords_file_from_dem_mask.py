@@ -44,3 +44,7 @@ t.setncatts( {'long_name': 'model catchment mask'})
 t[:] = trimmed_mask
 
 out_nc_file.close()
+#
+# met = xr.open_dataset(config['output_file']['output_folder'] + output_file)
+# met.elevation.to_netcdf('elevation.nc')
+# met.mask.to_netcdf('mask.nc')
