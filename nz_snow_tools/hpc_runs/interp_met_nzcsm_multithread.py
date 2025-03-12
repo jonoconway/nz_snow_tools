@@ -87,7 +87,14 @@ def get_dataset_dict(config, first_time, last_time):
     for var in config['variables'].keys():
         with xr.open_dataset(config['variables'][var]['input_file'], decode_times=True) as ds:
             ds = ds.rename_dims({config['variables'][var]['input_time_var']: 'time'}).rename_vars({config['variables'][var]['input_time_var']: 'time'})
+
+            # Round the time to the nearest hour
+            rounded_times = ds.time.dt.round('h')
+            # Assign the rounded times back to the DataArray
+            ds['time'] = rounded_times
+
             dataset_dict[var] = ds.sel(time=slice(first_time, last_time))
+
     return dataset_dict
 
 def process_time_step(config, dataset_dict_vars, i_time, var, intput_dict, output_grid_dict):
@@ -358,7 +365,7 @@ def interp_met_nzcsm_multithread(config_file):
                         for i_var in hi_res_out_dict.keys():
                             t[i_var][i_time_index, :, :] = hi_res_out_dict[i_var]
                 except Exception as e:
-                    print(f"Error processing time step {i_time}: {e}")
+                    print(f"{e}")
                     continue
             # post processing
             if var in ['total_precip']:
@@ -371,8 +378,7 @@ def interp_met_nzcsm_multithread(config_file):
                             t['snowfall_rate'][i_time_index, :, :] = hi_res_snow_rate
                             t['rainfall_rate'][i_time_index, :, :] = hi_res_rain_rate
                     except Exception as e:
-                        i_time = time_series[i_time_index]
-                        print(f"Error post processing {i_time}: {e}")
+                        print(f"{e}")
                         continue
         print(f"{datetime.datetime.now()}: Done")
     out_nc_file.close()
