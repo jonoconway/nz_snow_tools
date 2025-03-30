@@ -2,6 +2,8 @@
 code to generate catchment masks for MODIS grid
 updated to load for all shapefiles in a folder
 
+plot_mask.py
+
 """
 
 
@@ -65,10 +67,15 @@ for catchment in shps:
 
 
 #
-# masks =  os.listdir(mask_folder)
+# now plot_mask.py
+
+# import os
 # import matplotlib.pylab as plt
+# mask_folder = '/nesi/project/niwa00026/Observations/Snow_RemoteSensing/catchment_masks/Southland_Fiordland/'
+# masks =  os.listdir(mask_folder)
+#
 # for m in masks:
 #     plt.figure()
 #     plt.imshow(plt.load(mask_folder + '/' + m),origin='lower')
 #     plt.title(m)
-# plt.show()
+#     plt.show()
