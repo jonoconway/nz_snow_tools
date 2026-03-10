@@ -86,8 +86,8 @@ def get_dataset_dict(config, first_time, last_time):
     dataset_dict = {}
     for var in config['variables'].keys():
         with xr.open_dataset(config['variables'][var]['input_file'], decode_times=True) as ds:
-            ds = ds.rename_dims({config['variables'][var]['input_time_var']: 'time'}).rename_vars({config['variables'][var]['input_time_var']: 'time'})
-
+            if 'time' not in ds:
+                ds = ds.rename_dims({config['variables'][var]['input_time_var']: 'time'}).rename_vars({config['variables'][var]['input_time_var']: 'time'})
             # Round the time to the nearest hour
             rounded_times = ds.time.dt.round('h')
             # Assign the rounded times back to the DataArray
