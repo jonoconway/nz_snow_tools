@@ -1,0 +1,103 @@
+---
+#yaml file containing configuration options for interp_met_nzcsm
+# if including
+variables:
+  solar_rad:
+    input_file: "/esi/project/niwa00004/careysmitht/NZENS/rain_bc/mem000/met_202207_nzens000-mos.nc"
+    input_var_name: "sfc_dw_sw_flux"
+    input_time_var: "time"
+    output_name: "sfc_dw_sw_flux"
+    round_time: True
+    output_meta:
+      units: "W m-2"
+      standard_name: "surface_downward_shortwave_flux"
+      long_name: "downward shortwave flux at the surface"
+  air_temp:
+    input_file: "/esi/project/niwa00004/careysmitht/NZENS/rain_bc/mem000/met_202207_nzens000-mos.nc"
+    input_var_name: "sfc_temp"
+    input_time_var: "time"
+    output_name: "sfc_temp"
+    output_meta:
+      units: "K"
+      standard_name: "air_temperature"
+      long_name: "air temperature at 1.5m"
+  rh:
+    input_file: "/esi/project/niwa00004/careysmitht/NZENS/rain_bc/mem000/met_202207_nzens000-mos.nc"
+    input_var_name: "sfc_rh"
+    input_time_var: "time"
+    output_name: "sfc_rh"
+    output_meta:
+      units: "%"
+      standard_name: "relative_humidity"
+      long_name: "relative humidity w.r.t. ice bulb at 1.5m"
+  total_precip:
+    input_file: "/esi/project/niwa00004/careysmitht/NZENS/rain_bc/mem000/met_202207_nzens000-mos.nc"
+    input_var_name: "sum_total_precip_raw"
+    input_time_var: "time"
+    output_name: "total_precip"
+    output_meta:
+      units: "kg m-2"
+      standard_name: "precipitation_amount"
+      long_name: "sum of rain and lwe snowfall amounts"
+    calc_rain_snow_rate: True
+    rain_snow_method: 274.15 # 'value in K or 'harder'
+    harder_interp_file: 'C:/Users/conwayjp/OneDrive - ESNZ/projects/FWWR_SIN/data processing/point_model_inputs/mueller_hut/hydrometeor_temp_lookup.pkl'
+    rain_rate_output_meta:
+      units: "kg m-2 s-1"
+      standard_name: "rainfall_flux"
+      long_name: "rainfall rate in mm w.e. s-1"
+    snow_rate_output_meta:
+      units: "kg m-2 s-1"
+      standard_name: "snowfall_flux"
+      long_name: "snowfall rate in mm w.e. s-1"
+#  lw_rad:
+#    input_file: "/esi/project/niwa00004/careysmitht/NZENS/rain_bc/mem000/met_202207_nzens000-mos.nc"
+#    input_var_name: "sfc_dw_lw_flux"
+#    input_time_var: "time"
+#    output_name: "sfc_dw_lw_flux"
+#    round_time: True
+#    output_meta:
+#      units: "W m-2"
+#      standard_name: "surface_downward_longwave_flux"
+#      long_name: "downward longwave flux at the surface"
+  air_pres:
+    input_file: "/esi/project/niwa00004/careysmitht/NZENS/rain_bc/mem000/met_202207_nzens000-mos.nc"
+    input_var_name: "mslp"
+    input_time_var: "time"
+    input_mslp: True
+    output_name: "sfc_air_press"
+    output_meta:
+      units: "Pa"
+      standard_name: "air_pressure"
+      long_name: "surface pressure at model surface"
+  wind_speed:
+    convert_uv: True
+    input_file: "/esi/project/niwa00004/careysmitht/NZENS/rain_bc/mem000/met_202207_nzens000-mos.nc"
+    input_var_name_u: "sfc_zonal_wind"
+    input_var_name_v: "sfc_merid_wind"
+    input_time_var: "time0"
+    output_name: "sfc_wind_speed"
+    output_meta:
+      units: "m s-1"
+      standard_name: "wind_speed"
+      long_name: "wind speed at 10m derived from eastward and northward components"
+
+input_grid:
+  dem_file: "/esi/project/niwa00004/careysmitht/NZENS/rain_bc/mem000/met_202207_nzens000-mos.nc"
+  dem_var_name: 'orog_model'
+  coord_system: 'rotated_pole'
+  y_coord_name: 'rlat'
+  x_coord_name: 'rlon'
+
+output_grid:
+  dem_name: "modis_nz_dem_250m"
+  dem_file: "/esi/project/uoo04017/jonoconway/modis_nz_dem_250m_update.npy"
+  catchment_name: "ahuriri_test_100_square_modis_nz_dem_250m"
+  catchment_mask: '/esi/project/uoo04017/jonoconway/met_input_masks/ahuriri_test_100_square_modis_nz_dem_250m.npy' # set to 'elev' if you want to make square domain covering the whole dem file.
+
+output_file:
+  output_folder: '/esi/project/niwa00004/jonoconway/FSM_input/ahuriri_test_100_square'
+  file_name_template: '/met_interp_{}_{}_ahuriri_test_100_square_250m_nztm_274_nzens.nc'
+  first_timestamp: '2022-07-05 01:00:00'
+  last_timestamp: '2022-07-07 00:00:00'
+  timestep: 3600 # timestep of output in seconds

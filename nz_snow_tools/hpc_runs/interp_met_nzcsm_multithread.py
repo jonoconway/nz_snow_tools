@@ -389,7 +389,7 @@ if __name__ == '__main__':
         config_file = sys.argv[1]
         print(f"{datetime.datetime.now()}: reading configuration file")
     else:
-        config_file = r'C:\Users\conwayjp\code\github\nz_snow_tools_jc\nz_snow_tools\hpc_runs\nzcsm_local.yaml'
+        config_file = (r'C:\Users\conwayjp\code\github\nz_snow_tools_jc\nz_snow_tools\hpc_runs\interp_met_yamls\nzens_local.yaml')
         print('incorrect number of commandline inputs')
 
     interp_met_nzcsm_multithread(config_file)
