@@ -92,12 +92,12 @@ input_grid:
 output_grid:
   dem_name: "modis_nz_dem_250m"
   dem_file: "C:/Users/conwayjp/OneDrive - ESNZ/Data/GIS_DATA/Topography/DEM_NZSOS/modis_nz_dem_250m_update.npy"
-  catchment_name: "ahuriri_test_100_square_modis_nz_dem_250m"
-  catchment_mask: 'C:/Users/conwayjp/OneDrive - ESNZ/projects/Snowmelt forecast/catchment_masks/ahuriri_test_100_square_modis_nz_dem_250m.npy' # set to 'elev' if you want to make square domain covering the whole dem file.
+  catchment_name: "nz_30_30_15_11_modis_nz_dem_250m"
+  catchment_mask: 'C:/Users/conwayjp/OneDrive - ESNZ/projects/Snowmelt forecast/catchment_masks/nz_30_30/nz_30_30_15_11_modis_nz_dem_250m.npy' # set to 'elev' if you want to make square domain covering the whole dem file.
 
 output_file:
   output_folder: 'C:/Users/conwayjp/OneDrive - ESNZ/Temp'
-  file_name_template: '/met_interp_{}_{}_ahuriri_test_100_square_250m_nztm_274_nzens.nc'
+  file_name_template: '/met_interp_{}_{}_nz_30_30_15_11_250m_nztm_274_nzens.nc'
   first_timestamp: '2022-07-01 15:00:00'
   last_timestamp: '2022-08-01 15:00:00'
   timestep: 3600 # timestep of output in seconds
