@@ -17,7 +17,7 @@ import os
 import sys
 import numpy as np
 import cartopy.crs as ccrs
-from dateutil import parser
+import dateutil
 import datetime
 import gc
 import pandas as pd
@@ -102,7 +102,14 @@ def process_time_step(config, dataset_dict_vars, i_time, var, input_dict, output
     # read the original data
     dataset_dict_timestep = {}
     for i_vars in dataset_dict_vars.keys():
-        dataset_dict_timestep[i_vars] = dataset_dict_vars[i_vars].sel(time=i_time).load()
+        try:
+            dataset_dict_timestep[i_vars] = dataset_dict_vars[i_vars].sel(time=i_time).load()
+        except Exception as e:
+            print(f"WARNING: No data for {i_vars} at {i_time}")
+            dataset_dict_timestep[i_vars] = None
+    
+    if dataset_dict_timestep[var] is None:
+        return i_time, None
 
     out_rlons = output_grid_dict['out_rlons']
     out_rlats = output_grid_dict['out_rlats']
@@ -122,7 +129,7 @@ def process_time_step(config, dataset_dict_vars, i_time, var, input_dict, output
                 input_hourly = dataset_dict_timestep[var][config['variables'][var]['input_var_name']].values
                 hi_res_out = interpolate_met(input_hourly, var, inp_lons, inp_lats, inp_elev_interp, out_rlons, out_rlats, elev, single_dt=True)
                 hi_res_out_dict[var] = hi_res_out
-                if 'lw_rad' in config['variables'].keys():
+                if 'lw_rad' in config['variables'].keys() and dataset_dict_timestep['lw_rad'] is not None:
                     lw_rad_hourly = dataset_dict_timestep['lw_rad'][config['variables']['lw_rad']['input_var_name']].values
                     air_temp_hourly = dataset_dict_timestep['air_temp'][config['variables']['air_temp']['input_var_name']].values
                     input_hourly = lw_rad_hourly / (5.67e-8 * air_temp_hourly ** 4)
@@ -300,8 +307,8 @@ def interp_met_nzcsm_multithread(config_file, n_threads):
 
     config = yaml.load(open(config_file), Loader=yaml.FullLoader)
 
-    first_time = parser.parse(config['output_file']['first_timestamp'])
-    last_time = parser.parse(config['output_file']['last_timestamp'])
+    first_time = dateutil.parser.parse(config['output_file']['first_timestamp'])
+    last_time = dateutil.parser.parse(config['output_file']['last_timestamp'])
     # Generate a time series of time
     time_series = pd.date_range(start=first_time, end=last_time, freq=f'{config["output_file"]["timestep"]}s')
 
