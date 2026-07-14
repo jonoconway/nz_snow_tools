@@ -328,15 +328,15 @@ def interp_met_nzcsm_multithread(config_file, n_threads):
     t = {}
     for var in vars_sorted:
         # set up variable in output file
-        t[var] = out_nc_file.createVariable(config['variables'][var]['output_name'], 'f4', ('time', 'northing', 'easting',), zlib=True)  # ,chunksizes=(1, 100, 100)
+        t[var] = out_nc_file.createVariable(config['variables'][var]['output_name'], 'f4', ('time', 'northing', 'easting',), zlib=True, fill_value=np.nan)  # ,chunksizes=(1, 100, 100)
         t[var].setncatts(config['variables'][var]['output_meta'])
         if var == 'total_precip':
             if 'calc_rain_snow_rate' in config['variables']['total_precip'].keys():
                 if config['variables']['total_precip']['calc_rain_snow_rate']:
                     # set up additional outputs
-                    t['snowfall_rate'] = out_nc_file.createVariable('snowfall_rate', 'f4', ('time', 'northing', 'easting',), zlib=True)
+                    t['snowfall_rate'] = out_nc_file.createVariable('snowfall_rate', 'f4', ('time', 'northing', 'easting',), zlib=True, fill_value=np.nan)
                     t['snowfall_rate'].setncatts(config['variables']['total_precip']['snow_rate_output_meta'])
-                    t['rainfall_rate'] = out_nc_file.createVariable('rainfall_rate', 'f4', ('time', 'northing', 'easting',), zlib=True)
+                    t['rainfall_rate'] = out_nc_file.createVariable('rainfall_rate', 'f4', ('time', 'northing', 'easting',), zlib=True, fill_value=np.nan)
                     t['rainfall_rate'] .setncatts(config['variables']['total_precip']['rain_rate_output_meta'])
 
     # 4.3, run through each variable
