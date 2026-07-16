@@ -97,7 +97,7 @@ output_grid:
 
 output_file:
   output_folder: '/esi/project/niwa00004/jonoconway/FSM_input/ahuriri_test_100_square'
-  file_name_template: '/met_interp_{}_{}_ahuriri_test_100_square_250m_nztm_274_nzens.nc'
+  file_name_template: '/met_interp_nzens000_{}_{}_ahuriri_test_100_square_250m_nztm_274.nc'
   first_timestamp: '2022-07-05 01:00:00'
   last_timestamp: '2022-07-07 00:00:00'
   timestep: 3600 # timestep of output in seconds

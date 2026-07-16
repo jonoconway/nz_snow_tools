@@ -5,6 +5,9 @@ assumes input air temp in K for calculation of LW rad
 
 if interpolating lw or calculating rain vs snow then need to ensure air temp and humidity come before these variables in the config file.
 
+accounts for slope/aspect for solar radiation (assumes input data are wrt horizontal)
+
+
 requires
 - dem
 - mask for the same DEM (created using generate_mask)

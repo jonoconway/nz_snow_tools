@@ -75,11 +75,13 @@ ds2 = ds2.sel(time=slice(ds1.time.min().values, ds1.time.max().values))
 # lw_new = lw_orig * (ta_new_K / ta_orig_K) ** 4
 ds1['sfc_dw_lw_flux'] = ds2.sfc_dw_lw_flux * (ds1.sfc_temp / ds2.sfc_temp) ** 4
 
-dso = ds1
+### add precipitation multiplier to make it look like NZRA..
+
+
 
 max_chunk = 512
 enc = {}
-for v, da in dso.data_vars.items():
+for v, da in ds1.data_vars.items():
     # chunk spatial dims in output, keep time=1 if present
     if da.ndim == 3 and "time" in da.dims:
         enc[v] = {"zlib": True, "complevel": 4,
@@ -90,11 +92,15 @@ for v, da in dso.data_vars.items():
                   "chunksizes": (min(max_chunk, da.sizes.get("northing", 1)),
                                  min(max_chunk, da.sizes.get("easting", 1)))}
 
-ds1.sel(time=slice('2021-04-01 01:00', '2022-04-01 00:00')).to_netcdf('/esi/project/niwa00004/jonoconway/FSM_input/nzens_nz_30_30_15_11_20212022.nc',
-                                                                      engine='netcdf4', encoding=enc)
-
+# ds1.sel(time=slice('2021-04-01 01:00', '2022-04-01 00:00')).to_netcdf('/esi/project/niwa00004/jonoconway/FSM_input/nzens_nz_30_30_15_11_20212022.nc',
+#                                                                       engine='netcdf4', encoding=enc)
 for year in np.arange(2021, 2024):
-    ds1.sel(time=slice('{}-04-01 01:00'.format(year), '{}-04-01 00:00'.format(year + 1))).to_netcdf(
-        '/esi/project/niwa00004/jonoconway/FSM_input/met_interp_nzens_nz_30_30_15_11_{}04010100_{}04010000_250m_nztm_274.nc'.format(year, year + 1),
+    ds1.sel(time=slice('{}-04-01 03:00'.format(year), '{}-04-01 02:00'.format(year + 1))).to_netcdf(
+        '/esi/project/niwa00004/jonoconway/FSM_input/met_interp_nzens000_nz_30_30_15_11_{}04010100_{}04010000_250m_nztm_274.nc'.format(year, year + 1),
         engine='netcdf4', encoding=enc)
-    print()
+
+# (ds2['sfc_temp'].mean(dim='time') - ds1['sfc_temp'].mean(dim='time')).plot()
+# plt.figure()
+# ds2.elevation.plot()
+# plt.show()
+
