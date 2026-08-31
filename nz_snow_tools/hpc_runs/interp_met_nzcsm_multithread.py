@@ -215,7 +215,6 @@ def process_time_step(config, dataset_dict_vars, i_time, var, intput_dict, outpu
                 hi_res_out = np.rad2deg(np.arctan2(-hi_res_out_u, -hi_res_out_v))
                 hi_res_out_dict[var] = hi_res_out
             case 'solar_rad':
-                breakpoint()
                 if 'slope_grid' in config['output_grid'].keys() and 'aspect_grid' in config['output_grid'].keys():
                     out_wgs84_lons = output_grid_dict['out_wgs84_lons']
                     out_wgs84_lats = output_grid_dict['out_wgs84_lats']
@@ -240,7 +239,7 @@ def process_time_step(config, dataset_dict_vars, i_time, var, intput_dict, outpu
                         cs = aws_loc.get_clearsky(dt_solar, model='simplified_solis',
                                                   aod700=0.10)  # TODO - use precipitable water and/or Iqbal to get better estimate
                         sw_cs_ghi = cs.ghi.values
-                        trc = input_hourly.filled(np.nan) / sw_cs_ghi
+                        trc = input_hourly / sw_cs_ghi
                         k = 0.65  # TODO use Conway, et al., 2016 formulae for k     k = 0.1715 + 0.07182 * vp ;   k[k > 0.95] = 0.95
                         neff = (1 - trc) / k
                         neff[neff < 0] = 0
@@ -250,7 +249,7 @@ def process_time_step(config, dataset_dict_vars, i_time, var, intput_dict, outpu
                         input_hourly_dir = input_hourly * (1 - fdiff)
 
                         # interpolate the diffuse component (accounting for svf of self-shading slope (no terrain shading))
-                        hi_res_diff = interpolate_met(input_hourly_diff.filled(np.nan), var, inp_lons, inp_lats, inp_elev_interp, out_rlons, out_rlats, elev,
+                        hi_res_diff = interpolate_met(input_hourly_diff, var, inp_lons, inp_lats, inp_elev_interp, out_rlons, out_rlats, elev,
                                                       single_dt=True)
                         hi_res_diff_svf = hi_res_diff * (1 + np.cos(np.radians(out_grid_slope))) / 2  # Liu and Jordan
 
@@ -276,7 +275,7 @@ def process_time_step(config, dataset_dict_vars, i_time, var, intput_dict, outpu
                         inp_slope_to_hor_multiplier[inp_slope_to_hor_multiplier < 0] = 0
                         inp_slope_to_hor_multiplier[inp_slope_to_hor_multiplier > 10] = 10  # limit to enhancement given that could be issues with timing etc
 
-                        inp_dir_hor = input_hourly_dir.filled(np.nan) * inp_slope_to_hor_multiplier
+                        inp_dir_hor = input_hourly_dir * inp_slope_to_hor_multiplier
                         hi_res_dir_hor = interpolate_met(inp_dir_hor, var, inp_lons, inp_lats, inp_elev_interp, out_rlons, out_rlats, elev,
                                                          single_dt=True)
                         # calculate hi-res cos_zetap
