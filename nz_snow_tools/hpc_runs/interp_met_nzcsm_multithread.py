@@ -434,7 +434,8 @@ def sort_vars(config):
 
 def interp_met_nzcsm_multithread(config_file):
 
-    n_procs = int(os.environ.get("SLURM_CPUS_PER_TASK", '6'))
+    # n_procs = int(os.environ.get("SLURM_CPUS_PER_TASK", '6'))
+    n_procs = 1 #TODO undo hard code to single thread for debugging
     print(f'    running with {n_procs} threads')
 
     config = yaml.load(open(config_file), Loader=yaml.FullLoader)
