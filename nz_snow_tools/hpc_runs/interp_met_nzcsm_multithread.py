@@ -29,6 +29,38 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 from nz_snow_tools.util.utils import make_regular_timeseries, u_v_from_ws_wd, ws_wd_from_u_v
 from nz_snow_tools.met.interp_met_data_hourly_vcsn_data import interpolate_met, setup_nztm_dem, setup_nztm_grid_netcdf, trim_lat_lon_bounds
 
+from pvlib.location import Location, solarposition
+# from cloudglacier.obj1.calc_cloud_metrics import *
+
+
+def calc_slope_aspect(dem,dxdy):
+    # calculate slope and aspect (in degrees) from dem. Assumes grid has origin in SW corner (bottom left)
+    # assume a square, axis-oriented grid
+    gx, gy = np.gradient(dem, dxdy)
+    gridslo = np.degrees(np.arctan(np.sqrt(gx * gx + gy * gy)))
+    # if origin == 'topleft':
+    #     data = - np.pi / 2. - np.arctan2(-gx, gy)
+    # elif origin == 'bottomleft':
+    # assume grid has origin in SW corner ('bottomleft'
+    data = - np.pi / 2. - np.arctan2(gx, gy)
+    data = np.where(data < -np.pi, data + 2 * np.pi, data)
+    gridasp = np.mod(np.degrees(data), 360)
+    return gridslo,gridasp
+
+
+def calc_cos_zetap(gridslo, gridasp, lat, soldec, hour_angle):
+    # calculate the ratio of direct irradiance on inclined plane and that of normal irradiance
+
+    cos_zetap1 = (np.cos(np.deg2rad(gridslo)) * np.sin(np.deg2rad(lat)) - np.cos(np.deg2rad(lat)) * np.cos(np.deg2rad(180 - gridasp)) * np.sin(
+        np.deg2rad(gridslo))) * np.sin(soldec)
+    cos_zetap2 = (np.sin(np.deg2rad(lat)) * np.cos(np.deg2rad(180 - gridasp)) * np.sin(np.deg2rad(gridslo)) + np.cos(
+        np.deg2rad(gridslo)) * np.cos(
+        np.deg2rad(lat))) * np.cos(soldec) * np.cos(-1 * hour_angle * np.pi / 180)
+    cos_zetap3 = np.sin(np.deg2rad(180 - gridasp)) * np.sin(np.deg2rad(gridslo)) * np.cos(soldec) * np.sin(
+        -1 * hour_angle * np.pi / 180)  # Note hour_angle from pvlib is opposite to that in Thomas's model calculation
+    cos_zetap = cos_zetap1 + cos_zetap2 + cos_zetap3
+    return cos_zetap
+
 
 def process_output_orogrpahy(config, first_time, last_time, rot_pole_crs):
     # create dem of model output grid:
@@ -81,6 +113,15 @@ def process_output_orogrpahy(config, first_time, last_time, rot_pole_crs):
     output_grid_dict['out_rlats'] = out_rlats
     output_grid_dict['elev'] = elev
     output_grid_dict['trimmed_mask'] = trimmed_mask
+    output_grid_dict['out_wgs84_lons'] = out_rlons
+    output_grid_dict['out_wgs84_lats'] = out_rlats
+
+    # precompute slope and aspect from elevation grid
+    if 'slope_grid' in config['output_grid'].keys() and 'aspect_grid' in config['output_grid'].keys():
+        grid_slope, grid_asp = calc_slope_aspect(elev,250)
+        output_grid_dict['grid_slope'] = grid_slope
+        output_grid_dict['grid_aspect'] = grid_asp
+
     return out_nc_file, output_grid_dict
 
 def get_dataset_dict(config, first_time, last_time):
@@ -181,6 +222,87 @@ def process_time_step(config, dataset_dict_vars, i_time, var, input_dict, output
                 hi_res_out_v = interpolate_met(input_hourly_v, var, inp_lons, inp_lats, inp_elev_interp, out_rlons, out_rlats, elev, single_dt=True)
                 hi_res_out = np.rad2deg(np.arctan2(-hi_res_out_u, -hi_res_out_v))
                 hi_res_out_dict[var] = hi_res_out
+            case 'solar_rad':
+                if 'slope_grid' in config['output_grid'].keys() and 'aspect_grid' in config['output_grid'].keys():
+                    out_wgs84_lons = output_grid_dict['out_wgs84_lons']
+                    out_wgs84_lats = output_grid_dict['out_wgs84_lats']
+                    out_grid_slope = output_grid_dict['grid_slope']
+                    out_grid_asp = output_grid_dict['grid_aspect']
+                    inp_grid_slope = intput_dict['grid_slope']
+                    inp_grid_asp = intput_dict['grid_aspect']
+
+                    input_hourly = dataset_dict_timestep[var][config['variables'][var]['input_var_name']].values
+                    # compute solar geometry for centre of domain (to check if need to compute)
+                    aws_loc = Location(out_wgs84_lats.mean(), out_wgs84_lons.mean(), tz='UTC', altitude=elev.mean())
+                    if 'mean' in config['variables']['solar_rad']['input_var_name']:
+                        dt_solar = pd.to_datetime(i_time).tz_localize('UTC') - np.timedelta64(30, 'm')  # move back to centre of previous hour
+                    else:
+                        dt_solar = pd.to_datetime(i_time).tz_localize('UTC')
+                    solp = aws_loc.get_solarposition(dt_solar)
+                    if solp['elevation'].values > 0.5:  # only compute if sun is more than 0.5 degrees above horizon
+                        # split into diffuse and direct components (so could be compatible with reading these directly)
+                        # TODO read in diffuse and direct components
+                        # first estimate diffuse fraction as function of solar transmission
+                        # compute clear-sky in middle of output domain
+                        cs = aws_loc.get_clearsky(dt_solar, model='simplified_solis',
+                                                  aod700=0.10)  # TODO - use precipitable water and/or Iqbal to get better estimate
+                        sw_cs_ghi = cs.ghi.values
+                        trc = input_hourly / sw_cs_ghi
+                        k = 0.65  # TODO use Conway, et al., 2016 formulae for k     k = 0.1715 + 0.07182 * vp ;   k[k > 0.95] = 0.95
+                        neff = (1 - trc) / k
+                        neff[neff < 0] = 0
+                        neff[neff > 1] = 1
+                        fdiff = 0.1 + 0.9 * neff
+                        input_hourly_diff = input_hourly * fdiff
+                        input_hourly_dir = input_hourly * (1 - fdiff)
+
+                        # interpolate the diffuse component (accounting for svf of self-shading slope (no terrain shading))
+                        hi_res_diff = interpolate_met(input_hourly_diff, var, inp_lons, inp_lats, inp_elev_interp, out_rlons, out_rlats, elev,
+                                                      single_dt=True)
+                        hi_res_diff_svf = hi_res_diff * (1 + np.cos(np.radians(out_grid_slope))) / 2  # Liu and Jordan
+
+                        # interpolate the direct component accounting for slope, aspect and self-shading
+                        # ratio of normal irradiance to horizontal (sin_h)
+                        sin_h = np.maximum(0.01, np.sin(np.radians(solp['elevation'].values)))
+                        # calculate geometry between solar beam and slope (cos_zetap)
+                        lat = aws_loc.latitude  # latitude in degrees north
+                        longitude = aws_loc.longitude  # longitude in degrees east
+                        doy = [t.timetuple().tm_yday for t in [dt_solar]]  # day of year
+                        soldec = np.asarray([solarposition.declination_spencer71(d) for d in doy])  # solar declination in radians
+                        eqt = solp.equation_of_time.values  # use value from mid-domain.
+                        # eqt = np.asarray([solarposition.equation_of_time_spencer71(d) for d in doy])  # equation of time in minutes
+                        # solar hour angle (in degrees) 0 = local midday, -90 = 9 am local time, 90 = 3pm local time
+                        hour_angle = solarposition.hour_angle(pd.DatetimeIndex([dt_solar, dt_solar]), longitude, eqt)  # hack time as DatetimeIndex for pvlib
+                        hour_angle = hour_angle[0]
+
+                        # calculate low-res cos_zetap, correct input data to horizontal plane and interpolate this to hi-res
+                        inp_cos_zetap = calc_cos_zetap(inp_grid_slope, inp_grid_asp, lat, soldec, hour_angle)
+                        inp_slope_to_hor_multiplier = sin_h / inp_cos_zetap  # ratio of direct radiation on slope and horizontal planes
+                        inp_slope_to_hor_multiplier[
+                            inp_cos_zetap < 0] = 0  # no direct beam if self shaded. #TODO fix hack that will break when input data is self shaded -in this case make all the radiation diffuse and don't correct.
+                        inp_slope_to_hor_multiplier[inp_slope_to_hor_multiplier < 0] = 0
+                        inp_slope_to_hor_multiplier[inp_slope_to_hor_multiplier > 10] = 10  # limit to enhancement given that could be issues with timing etc
+
+                        inp_dir_hor = input_hourly_dir * inp_slope_to_hor_multiplier
+                        hi_res_dir_hor = interpolate_met(inp_dir_hor, var, inp_lons, inp_lats, inp_elev_interp, out_rlons, out_rlats, elev,
+                                                         single_dt=True)
+                        # calculate hi-res cos_zetap
+                        hi_res_cos_zetap = calc_cos_zetap(out_grid_slope, out_grid_asp, lat, soldec, hour_angle)
+
+                        hor_to_slope_multiplier = hi_res_cos_zetap / sin_h  # ratio of direct radiation on slope and horizontal planes
+                        hor_to_slope_multiplier[hi_res_cos_zetap < 0] = 0  # no direct beam if self shaded.
+                        hor_to_slope_multiplier[hor_to_slope_multiplier < 0] = 0
+                        hor_to_slope_multiplier[hor_to_slope_multiplier > 10] = 10  # limit to enhancement given that could be issues with timing etc
+                        hi_res_dir_slope = hi_res_dir_hor * hor_to_slope_multiplier
+                        # recombine into surface radiation
+                        hi_res_out = hi_res_diff_svf + hi_res_dir_slope
+                    else:  # sun below horizon so solar rad = 0
+                        hi_res_out = elev * 0
+                    hi_res_out_dict[var] = hi_res_out
+                else:
+                    input_hourly = dataset_dict_timestep[var][config['variables'][var]['input_var_name']].values
+                    hi_res_out = interpolate_met(input_hourly, var, inp_lons, inp_lats, inp_elev_interp, out_rlons, out_rlats, elev, single_dt=True)
+                    hi_res_out_dict[var] = hi_res_out
             case _:
                 input_hourly = dataset_dict_timestep[var][config['variables'][var]['input_var_name']].values
                 hi_res_out = interpolate_met(input_hourly, var, inp_lons, inp_lats, inp_elev_interp, out_rlons, out_rlats, elev, single_dt=True)
@@ -229,6 +351,12 @@ def process_input_orogrpahy(config):
         input_dict['inp_lats'] = nc_file_orog[config['input_grid']['y_coord_name']].values
         input_dict['inp_lons'] = nc_file_orog[config['input_grid']['x_coord_name']].values
 
+        # precompute slope and aspect from elevation grid
+        if 'slope_grid' in config['output_grid'].keys() and 'aspect_grid' in config['output_grid'].keys():
+            grid_slope, grid_asp = calc_slope_aspect(input_elev,1500) # assumes is on nominal 1.5 km rotated grid (this is close enough to reality for NZRA/NZCSM grid in central SI
+            intput_dict['grid_slope'] = grid_slope
+            intput_dict['grid_aspect'] = grid_asp
+
     return input_dict
 
 def process_input_orogrpahy_no_dem_file(config, var, inp_nc_file, input_dict):
@@ -239,7 +367,7 @@ def process_input_orogrpahy_no_dem_file(config, var, inp_nc_file, input_dict):
         assert input_dict['rot_pole_crs'] == ccrs.RotatedPole(rot_pole.grid_north_pole_longitude, rot_pole.grid_north_pole_latitude, rot_pole.north_pole_grid_longitude)
     else:
         print('only set up for rotated pole coordinates')
-    if var in ['air_temp','air_pres']:
+    if var in ['air_temp','air_pres','solar_rad']:
         input_elev = inp_nc_file[config['input_grid']['dem_var_name']].values  # needed for pressure adjustment
         inp_elev_interp = input_elev.copy() # needed for air temp
     else:
@@ -250,7 +378,14 @@ def process_input_orogrpahy_no_dem_file(config, var, inp_nc_file, input_dict):
     input_dict['inp_lons'] = inp_lons
     input_dict['input_elev'] = input_elev
     input_dict['inp_elev_interp'] = inp_elev_interp
-
+    
+    # precompute slope and aspect from elevation grid
+    if var == 'solar_rad' and 'slope_grid' in config['output_grid'].keys() and 'aspect_grid' in config['output_grid'].keys():
+        # calculate slope/aspect assuming a nominal 1.5 km rotated grid (this is close enough to reality for NZRA/NZCSM grid in central SI
+        grid_slope, grid_asp = calc_slope_aspect(input_elev, 1500)
+        intput_dict['grid_slope'] = grid_slope
+        intput_dict['grid_aspect'] = grid_asp
+        
 def post_processing_total_precip(config, var, th_interp, hi_res_tk, hi_res_rh, hi_res_out, i_time_index):
     hi_res_rain_rate = None
     hi_res_snow_rate = None

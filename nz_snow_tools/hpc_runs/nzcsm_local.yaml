@@ -85,7 +85,7 @@ variables:
       long_name: "wind speed at 10m derived from eastward and northward components"
 
 input_grid:
-  dem_file: 'C:/Users/conwayjp/OneDrive - NIWA/projects/CARH2101/tn_file_compilation/tn_2020083000-utc_nzcsm_coords.nc'
+  dem_file: 'none' # will use coordinates and orog model in each file
   dem_var_name: 'orog_model'
   coord_system: 'rotated_pole'
   y_coord_name: 'rlat'

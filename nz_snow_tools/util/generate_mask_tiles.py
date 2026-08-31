@@ -26,7 +26,7 @@ if dem == 'modis_si_dem_250m':
                                                                           resolution=250, origin='bottomleft')
 
 if dem == 'modis_nz_dem_250m':
-    nztm_dem, x_centres, y_centres, lat_array, lon_array = setup_nztm_dem(None, extent_w=1.085e6, extent_e=2.10e6, extent_n=6.20e6, extent_s=4.70e6,
+    nztm_dem, x_centres, y_centres, lat_array, lon_array = setup_nztm_dem("C:/Users/conwayjp/OneDrive - NIWA/Data/GIS_DATA/Topography/DEM_NZSOS/modis_nz_dem_250m.npy", extent_w=1.085e6, extent_e=2.10e6, extent_n=6.20e6, extent_s=4.70e6,
                                                                           resolution=250, origin='bottomleft')
 
 if dem == 'nz_dem_250m':
@@ -53,3 +53,35 @@ plt.show()
 #     plt.imshow(plt.load(mask_folder + '/' + m),origin='lower')
 #     plt.title(m)
 # plt.show()
+
+plt.figure()
+plt.imshow(nztm_dem>1100,origin='lower',)
+
+# craigieburn files for Maya
+n = 50 # number of km for domain
+minx = 1.46e6 # right hand side
+maxy = 5.25e6 # top
+maxx = minx + (n * 1e3)
+miny = maxy - (n * 1e3)
+mask = np.logical_and(y_centres > miny, y_centres < maxy)[:, np.newaxis] * np.logical_and(x_centres > minx, x_centres < maxx)[np.newaxis, :]
+np.save(r'C:\Users\conwayjp\OneDrive - NIWA\projects\Snowmelt forecast\catchment_masks\craigieburn_{}_square_{}.npy'.format(n,dem), mask)
+plt.imshow(mask,origin='lower',alpha=0.2)
+
+n = 30 # number of km for domain
+minx = 1.477e6
+maxy = 5.232e6
+maxx = minx + (n * 1e3)
+miny = maxy - (n * 1e3)
+mask = np.logical_and(y_centres > miny, y_centres < maxy)[:, np.newaxis] * np.logical_and(x_centres > minx, x_centres < maxx)[np.newaxis, :]
+np.save(r'C:\Users\conwayjp\OneDrive - NIWA\projects\Snowmelt forecast\catchment_masks\craigieburn_{}_square_{}.npy'.format(n,dem), mask)
+plt.imshow(mask,origin='lower',alpha=0.2)
+
+
+n = 45 # number of km for domain
+minx = 1.465e6
+maxy = 5.245e6
+maxx = minx + (n * 1e3)
+miny = maxy - (n * 1e3)
+mask = np.logical_and(y_centres > miny, y_centres < maxy)[:, np.newaxis] * np.logical_and(x_centres > minx, x_centres < maxx)[np.newaxis, :]
+np.save(r'C:\Users\conwayjp\OneDrive - NIWA\projects\Snowmelt forecast\catchment_masks\craigieburn_{}_square_{}.npy'.format(n,dem), mask)
+plt.imshow(mask,origin='lower',alpha=0.2)
