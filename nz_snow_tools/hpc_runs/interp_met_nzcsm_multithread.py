@@ -360,7 +360,7 @@ def process_input_orogrpahy_no_dem_file(config, var, inp_nc_file, intput_dict):
         assert intput_dict['rot_pole_crs'] == ccrs.RotatedPole(rot_pole.grid_north_pole_longitude, rot_pole.grid_north_pole_latitude, rot_pole.north_pole_grid_longitude)
     else:
         print('only set up for rotated pole coordinates')
-    if var in ['air_temp','air_pres']:
+    if var in ['air_temp','air_pres','solar_rad']:
         input_elev = inp_nc_file[config['input_grid']['dem_var_name']].values  # needed for pressure adjustment
         inp_elev_interp = input_elev.copy() # needed for air temp
     else:
@@ -375,7 +375,6 @@ def process_input_orogrpahy_no_dem_file(config, var, inp_nc_file, intput_dict):
     # precompute slope and aspect from elevation grid
     if var == 'solar_rad' and 'slope_grid' in config['output_grid'].keys() and 'aspect_grid' in config['output_grid'].keys():
         # calculate slope/aspect assuming a nominal 1.5 km rotated grid (this is close enough to reality for NZRA/NZCSM grid in central SI
-        breakpoint()
         grid_slope, grid_asp = calc_slope_aspect(input_elev, 1500)
         intput_dict['grid_slope'] = grid_slope
         intput_dict['grid_aspect'] = grid_asp
