@@ -18,6 +18,7 @@ import yaml
 import os
 import sys
 import netCDF4 as nc
+import pandas as pd
 import numpy as np
 import cartopy.crs as ccrs
 import datetime as dt
@@ -30,7 +31,36 @@ from nz_snow_tools.util.utils import make_regular_timeseries, u_v_from_ws_wd, ws
 from nz_snow_tools.met.interp_met_data_hourly_vcsn_data import interpolate_met, setup_nztm_dem, setup_nztm_grid_netcdf, trim_lat_lon_bounds
 
 from pvlib.location import Location, solarposition
-from cloudglacier.obj1.calc_cloud_metrics import *
+# from cloudglacier.obj1.calc_cloud_metrics import *
+
+def calc_slope_aspect(dem,dxdy):
+    # gridslo = 0
+    # gridasp = 0
+    # assume a square, axis-oriented grid
+    gx, gy = np.gradient(dem, dxdy)
+    gridslo = np.degrees(np.arctan(np.sqrt(gx * gx + gy * gy)))
+    # if origin == 'topleft':
+    #     data = - np.pi / 2. - np.arctan2(-gx, gy)
+    # elif origin == 'bottomleft':
+    # assume grid has origin in SW corner ('bottomleft'
+    data = - np.pi / 2. - np.arctan2(gx, gy)
+    data = np.where(data < -np.pi, data + 2 * np.pi, data)
+    gridasp = np.mod(np.degrees(data), 360)
+    return gridslo,gridasp
+
+
+def calc_cos_zetap(gridslo, gridasp, lat, soldec, hour_angle):
+    # calculate the ratio of direct irradiance on inclined plane and that in beam normal
+
+    cos_zetap1 = (np.cos(np.deg2rad(gridslo)) * np.sin(np.deg2rad(lat)) - np.cos(np.deg2rad(lat)) * np.cos(np.deg2rad(180 - gridasp)) * np.sin(
+        np.deg2rad(gridslo))) * np.sin(soldec)
+    cos_zetap2 = (np.sin(np.deg2rad(lat)) * np.cos(np.deg2rad(180 - gridasp)) * np.sin(np.deg2rad(gridslo)) + np.cos(
+        np.deg2rad(gridslo)) * np.cos(
+        np.deg2rad(lat))) * np.cos(soldec) * np.cos(-1 * hour_angle * np.pi / 180)
+    cos_zetap3 = np.sin(np.deg2rad(180 - gridasp)) * np.sin(np.deg2rad(gridslo)) * np.cos(soldec) * np.sin(
+        -1 * hour_angle * np.pi / 180)  # Note hour_angle from pvlib is opposite to that in Thomas's model calculation
+    cos_zetap = cos_zetap1 + cos_zetap2 + cos_zetap3
+    return cos_zetap
 
 
 def interp_met_nzcsm(config_file):
@@ -97,18 +127,10 @@ def interp_met_nzcsm(config_file):
     # precompute slope and aspect from elevation grid
     if 'slope_grid' in config['output_grid'].keys() and 'aspect_grid' in config['output_grid'].keys():
         # read slope and aspect grids # TODO add read
-        gridslo = 0
-        gridasp = 0
-        # assume a square, axis-oriented grid
-        gx, gy = np.gradient(elev, 250.0)
-        gridslo = np.degrees(np.arctan(np.sqrt(gx * gx + gy * gy)))
-        # if origin == 'topleft':
-        #     data = - np.pi / 2. - np.arctan2(-gx, gy)
-        # elif origin == 'bottomleft':
-        # assume grid has origin in SW corner ('bottomleft'
-        data = - np.pi / 2. - np.arctan2(gx, gy)
-        data = np.where(data < -np.pi, data + 2 * np.pi, data)
-        gridasp = np.mod(np.degrees(data), 360)
+
+        grid_slope, grid_asp = calc_slope_aspect(elev,250)
+
+        inp_gridslo, inp_gridasp = calc_slope_aspect(input_elev, 1500.0)
 
     # set up output times
     first_time = parser.parse(config['output_file']['first_timestamp'])
@@ -267,6 +289,8 @@ def interp_met_nzcsm(config_file):
                 solp = aws_loc.get_solarposition(dt_solar)
                 if solp['elevation'].values > 0.5: # only compute if sun is more than 0.5 degrees above horizon
                     # split into diffuse and direct components (so could be compatible with reading these directly)
+                    # TODO read in diffuse and direct components
+                    # first estimate diffuse fraction as function of solar transmission
                     # compute clear-sky in middle of output domain
                     cs = aws_loc.get_clearsky(dt_solar, model='simplified_solis', aod700=0.10) # TODO - use precipitable water and/or Iqbal to get better estimate
                     sw_cs_ghi = cs.ghi.values
@@ -278,12 +302,12 @@ def interp_met_nzcsm(config_file):
                     fdiff = 0.1 + 0.9 * neff
                     input_hourly_diff = input_hourly * fdiff
                     input_hourly_dir = input_hourly * (1 - fdiff)
-                    #TODO read in diffuse and direct components
 
                     # interpolate the diffuse component (accounting for svf of self-shading slope (no terrain shading))
                     hi_res_diff = interpolate_met(input_hourly_diff.filled(np.nan), var, inp_lons, inp_lats, inp_elev_interp, out_rlons, out_rlats, elev,
                                                   single_dt=True)
-                    hi_res_diff_svf = hi_res_diff * (1 + np.cos(np.radians(gridslo))) / 2  # Liu and Jordan
+                    hi_res_diff_svf = hi_res_diff * (1 + np.cos(np.radians(grid_slope))) / 2  # Liu and Jordan
+
                     # interpolate the direct component accounting for slope, aspect and self-shading
                     # ratio of normal irradiance to horizontal (sin_h)
                     sin_h = np.maximum(0.01, np.sin(np.radians(solp['elevation'].values)))
@@ -291,23 +315,28 @@ def interp_met_nzcsm(config_file):
                     lat = aws_loc.latitude  # latitude in degrees north
                     longitude = aws_loc.longitude  # longitude in degrees east
                     doy = [t.timetuple().tm_yday for t in [dt_solar]]  # day of year
-                    soldec = np.asarray([pvlib.solarposition.declination_spencer71(d) for d in doy])  # solar declination in radians
-                    eqt = np.asarray([pvlib.solarposition.equation_of_time_spencer71(d) for d in doy])  # equation of time in minutes
+                    soldec = np.asarray([solarposition.declination_spencer71(d) for d in doy])  # solar declination in radians
+                    eqt = solp.equation_of_time.values # use value from mid-domain.
+                    # eqt = np.asarray([solarposition.equation_of_time_spencer71(d) for d in doy])  # equation of time in minutes
                     # solar hour angle (in degrees) 0 = local midday, -90 = 9 am local time, 90 = 3pm local time
-                    hour_angle = pvlib.solarposition.hour_angle(pd.DatetimeIndex([dt_solar, dt_solar]), longitude, eqt)  # hack time as DatetimeIndex for pvlib
+                    hour_angle = solarposition.hour_angle(pd.DatetimeIndex([dt_solar, dt_solar]), longitude, eqt)  # hack time as DatetimeIndex for pvlib
                     hour_angle = hour_angle[0]
-                    cos_zetap1 = (np.cos(np.deg2rad(gridslo)) * np.sin(np.deg2rad(lat)) - np.cos(np.deg2rad(lat)) * np.cos(np.deg2rad(180 - gridasp)) * np.sin(
-                        np.deg2rad(gridslo))) * np.sin(soldec)
-                    cos_zetap2 = (np.sin(np.deg2rad(lat)) * np.cos(np.deg2rad(180 - gridasp)) * np.sin(np.deg2rad(gridslo)) + np.cos(
-                        np.deg2rad(gridslo)) * np.cos(
-                        np.deg2rad(lat))) * np.cos(soldec) * np.cos(-1 * hour_angle * np.pi / 180)
-                    cos_zetap3 = np.sin(np.deg2rad(180 - gridasp)) * np.sin(np.deg2rad(gridslo)) * np.cos(soldec) * np.sin(
-                        -1 * hour_angle * np.pi / 180)  # hour_angle from pvlib is opposite to that in Thomas's model calculation
-                    cos_zetap = cos_zetap1 + cos_zetap2 + cos_zetap3
-                    hi_res_dir_hor = interpolate_met(input_hourly_dir.filled(np.nan), var, inp_lons, inp_lats, inp_elev_interp, out_rlons, out_rlats, elev,
+
+                    # calculate low-res cos_zetap, correct input data to horizontal plane and interpolate this to hi-res
+                    inp_cos_zetap = calc_cos_zetap(inp_gridslo, inp_gridasp, lat, soldec, hour_angle)
+                    inp_slope_to_hor_multiplier = sin_h/ inp_cos_zetap # ratio of direct radiation on slope and horizontal planes
+                    inp_slope_to_hor_multiplier[inp_cos_zetap < 0] = 0  # no direct beam if self shaded. #TODO fix hack that will break when input data is self shaded -in this case make all the radiation diffuse and don't correct.
+                    inp_slope_to_hor_multiplier[inp_slope_to_hor_multiplier < 0] = 0
+                    inp_slope_to_hor_multiplier[inp_slope_to_hor_multiplier > 10] = 10  # limit to enhancement given that could be issues with timing etc
+
+                    inp_dir_hor = input_hourly_dir.filled(np.nan) * inp_slope_to_hor_multiplier
+                    hi_res_dir_hor = interpolate_met(inp_dir_hor, var, inp_lons, inp_lats, inp_elev_interp, out_rlons, out_rlats, elev,
                                                      single_dt=True)
-                    hor_to_slope_multiplier = cos_zetap / sin_h  # ratio of direct radiation on slope and horizontal planes
-                    hor_to_slope_multiplier[cos_zetap < 0] = 0  # no direct beam if self shaded.
+                    # calculate hi-res cos_zetap
+                    hi_res_cos_zetap = calc_cos_zetap(grid_slope, grid_asp,lat,soldec,hour_angle)
+
+                    hor_to_slope_multiplier = hi_res_cos_zetap / sin_h  # ratio of direct radiation on slope and horizontal planes
+                    hor_to_slope_multiplier[hi_res_cos_zetap < 0] = 0  # no direct beam if self shaded.
                     hor_to_slope_multiplier[hor_to_slope_multiplier < 0] = 0
                     hor_to_slope_multiplier[hor_to_slope_multiplier > 10] = 10  # limit to enhancement given that could be issues with timing etc
                     hi_res_dir_slope = hi_res_dir_hor * hor_to_slope_multiplier
