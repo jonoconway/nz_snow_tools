@@ -223,6 +223,7 @@ def process_time_step(config, dataset_dict_vars, i_time, var, intput_dict, outpu
                 hi_res_out = np.rad2deg(np.arctan2(-hi_res_out_u, -hi_res_out_v))
                 hi_res_out_dict[var] = hi_res_out
             case 'solar_rad':
+                breakpoint()
                 if 'slope_grid' in config['output_grid'].keys() and 'aspect_grid' in config['output_grid'].keys():
 
                     input_hourly = dataset_dict_timestep[var][config['variables'][var]['input_var_name']].values
@@ -372,6 +373,13 @@ def process_input_orogrpahy_no_dem_file(config, var, inp_nc_file, intput_dict):
     intput_dict['inp_lons'] = inp_lons
     intput_dict['input_elev'] = input_elev
     intput_dict['inp_elev_interp'] = inp_elev_interp
+
+    # precompute slope and aspect from elevation grid
+    if var == 'solar_rad' and 'slope_grid' in config['output_grid'].keys() and 'aspect_grid' in config['output_grid'].keys():
+        # calculate slope/aspect assuming a nominal 1.5 km rotated grid (this is close enough to reality for NZRA/NZCSM grid in central SI
+        grid_slope, grid_asp = calc_slope_aspect(input_elev, 1500)
+        intput_dict['grid_slope'] = grid_slope
+        intput_dict['grid_aspect'] = grid_asp
 
 def post_processing_total_precip(out_nc_file, config, var, i_time_index):
     hi_res_rain_rate = None
