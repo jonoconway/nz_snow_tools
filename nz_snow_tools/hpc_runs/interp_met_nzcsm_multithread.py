@@ -151,14 +151,6 @@ def process_time_step(config, dataset_dict_vars, i_time, var, intput_dict, outpu
     inp_lats = intput_dict['inp_lats']
     inp_elev_interp = intput_dict['inp_elev_interp']
 
-    if 'slope_grid' in config['output_grid'].keys() and 'aspect_grid' in config['output_grid'].keys():
-        out_wgs84_lons = output_grid_dict['out_wgs84_lons']
-        out_wgs84_lats = output_grid_dict['out_wgs84_lats']
-        out_grid_slope = output_grid_dict['grid_slope']
-        out_grid_asp = output_grid_dict['grid_aspect']
-        inp_grid_slope = intput_dict['grid_slope']
-        inp_grid_asp = intput_dict['grid_aspect']
-
     hi_res_out_dict = {}
     try:
         match var:
@@ -225,6 +217,12 @@ def process_time_step(config, dataset_dict_vars, i_time, var, intput_dict, outpu
             case 'solar_rad':
                 breakpoint()
                 if 'slope_grid' in config['output_grid'].keys() and 'aspect_grid' in config['output_grid'].keys():
+                    out_wgs84_lons = output_grid_dict['out_wgs84_lons']
+                    out_wgs84_lats = output_grid_dict['out_wgs84_lats']
+                    out_grid_slope = output_grid_dict['grid_slope']
+                    out_grid_asp = output_grid_dict['grid_aspect']
+                    inp_grid_slope = intput_dict['grid_slope']
+                    inp_grid_asp = intput_dict['grid_aspect']
 
                     input_hourly = dataset_dict_timestep[var][config['variables'][var]['input_var_name']].values
                     # compute solar geometry for centre of domain (to check if need to compute)
@@ -377,6 +375,7 @@ def process_input_orogrpahy_no_dem_file(config, var, inp_nc_file, intput_dict):
     # precompute slope and aspect from elevation grid
     if var == 'solar_rad' and 'slope_grid' in config['output_grid'].keys() and 'aspect_grid' in config['output_grid'].keys():
         # calculate slope/aspect assuming a nominal 1.5 km rotated grid (this is close enough to reality for NZRA/NZCSM grid in central SI
+        breakpoint()
         grid_slope, grid_asp = calc_slope_aspect(input_elev, 1500)
         intput_dict['grid_slope'] = grid_slope
         intput_dict['grid_aspect'] = grid_asp
