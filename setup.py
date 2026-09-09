@@ -39,5 +39,6 @@ setup(
         'dask',
         'distributed',
         'bokeh',
+        'pvlib'
     ],
 )
