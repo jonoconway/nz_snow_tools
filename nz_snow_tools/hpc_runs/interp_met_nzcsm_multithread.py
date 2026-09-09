@@ -228,8 +228,8 @@ def process_time_step(config, dataset_dict_vars, i_time, var, input_dict, output
                     out_wgs84_lats = output_grid_dict['out_wgs84_lats']
                     out_grid_slope = output_grid_dict['grid_slope']
                     out_grid_asp = output_grid_dict['grid_aspect']
-                    inp_grid_slope = intput_dict['grid_slope']
-                    inp_grid_asp = intput_dict['grid_aspect']
+                    inp_grid_slope = input_dict['grid_slope']
+                    inp_grid_asp = input_dict['grid_aspect']
 
                     input_hourly = dataset_dict_timestep[var][config['variables'][var]['input_var_name']].values
                     # compute solar geometry for centre of domain (to check if need to compute)
@@ -354,8 +354,8 @@ def process_input_orogrpahy(config):
         # precompute slope and aspect from elevation grid
         if 'slope_grid' in config['output_grid'].keys() and 'aspect_grid' in config['output_grid'].keys():
             grid_slope, grid_asp = calc_slope_aspect(input_elev,1500) # assumes is on nominal 1.5 km rotated grid (this is close enough to reality for NZRA/NZCSM grid in central SI
-            intput_dict['grid_slope'] = grid_slope
-            intput_dict['grid_aspect'] = grid_asp
+            input_dict['grid_slope'] = grid_slope
+            input_dict['grid_aspect'] = grid_asp
 
     return input_dict
 
@@ -383,8 +383,8 @@ def process_input_orogrpahy_no_dem_file(config, var, inp_nc_file, input_dict):
     if var == 'solar_rad' and 'slope_grid' in config['output_grid'].keys() and 'aspect_grid' in config['output_grid'].keys():
         # calculate slope/aspect assuming a nominal 1.5 km rotated grid (this is close enough to reality for NZRA/NZCSM grid in central SI
         grid_slope, grid_asp = calc_slope_aspect(input_elev, 1500)
-        intput_dict['grid_slope'] = grid_slope
-        intput_dict['grid_aspect'] = grid_asp
+        input_dict['grid_slope'] = grid_slope
+        input_dict['grid_aspect'] = grid_asp
         
 def post_processing_total_precip(config, var, th_interp, hi_res_tk, hi_res_rh, hi_res_out, i_time_index):
     hi_res_rain_rate = None
