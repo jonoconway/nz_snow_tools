@@ -76,7 +76,15 @@ def process_output_orogrpahy(config, first_time, last_time, rot_pole_crs):
     elif config['output_grid']['dem_name'] == 'pisa_dem_10m':
         nztm_dem, x_centres, y_centres, lat_array, lon_array = setup_nztm_dem(config['output_grid']['dem_file'], extent_w=1.2865e6, extent_e=1.3021e6, extent_n=5.0269e6,
                                                                               extent_s=5.0134e6, resolution=10, origin='bottomleft')
-
+    elif config['output_grid']['dem_name'] == 'pisa_dem_5m':
+        nztm_dem, x_centres, y_centres, lat_array, lon_array = setup_nztm_dem(config['output_grid']['dem_file'], extent_w=1.2865e6, extent_e=1.3021e6, extent_n=5.0269e6,
+                                                                              extent_s=5.0134e6, resolution=5, origin='bottomleft')
+    elif config['output_grid']['dem_name'] == 'pisa_dem_2m':
+        nztm_dem, x_centres, y_centres, lat_array, lon_array = setup_nztm_dem(config['output_grid']['dem_file'], extent_w=1.2865e6, extent_e=1.3021e6, extent_n=5.0269e6,
+                                                                              extent_s=5.0134e6, resolution=2, origin='bottomleft')
+    elif config['output_grid']['dem_name'] == 'pisa_dem_1m':
+        nztm_dem, x_centres, y_centres, lat_array, lon_array = setup_nztm_dem(config['output_grid']['dem_file'], extent_w=1.2865e6, extent_e=1.3021e6, extent_n=5.0269e6,
+                                                                              extent_s=5.0134e6, resolution=1, origin='bottomleft')
     else:
         print(' incorrect dem name specified')
 
