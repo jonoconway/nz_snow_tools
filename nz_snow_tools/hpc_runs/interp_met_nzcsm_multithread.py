@@ -73,6 +73,10 @@ def process_output_orogrpahy(config, first_time, last_time, rot_pole_crs):
     elif config['output_grid']['dem_name'] == 'modis_nz_dem_250m':
         nztm_dem, x_centres, y_centres, lat_array, lon_array = setup_nztm_dem(config['output_grid']['dem_file'], extent_w=1.085e6, extent_e=2.10e6, extent_n=6.20e6,
                                                                             extent_s=4.70e6, resolution=250, origin='bottomleft')
+    elif config['output_grid']['dem_name'] == 'pisa_dem_10m':
+        nztm_dem, x_centres, y_centres, lat_array, lon_array = setup_nztm_dem(config['output_grid']['dem_file'], extent_w=1.2865e6, extent_e=1.3021e6, extent_n=5.0269e6,
+                                                                              extent_s=5.0134e6, resolution=10, origin='bottomleft')
+
     else:
         print(' incorrect dem name specified')
 
@@ -318,7 +322,7 @@ def process_time_step(config, dataset_dict_vars, i_time, var, intput_dict, outpu
 
 def process_input_orogrpahy(config):
     print(f"{datetime.datetime.now()}: processing input orogrpahy") # load to get coordinate reference system for interpolation
-    
+
     intput_dict = {}
 
     if config['input_grid']['dem_file'] == 'none': # if no specific model orography file then open air pressure input variable file and extract coordinate system out of it
@@ -335,7 +339,7 @@ def process_input_orogrpahy(config):
             intput_dict['rot_pole_crs'] = ccrs.RotatedPole(rot_pole.grid_north_pole_longitude, rot_pole.grid_north_pole_latitude, rot_pole.north_pole_grid_longitude)
         else:
             print(' currently only set up for rotated pole')
-            
+
         input_elev = nc_file_orog[config['input_grid']['dem_var_name']].values # needed for pressure
         intput_dict['input_elev'] = input_elev
         intput_dict['inp_elev_interp'] = input_elev.copy()
@@ -474,7 +478,7 @@ def interp_met_nzcsm_multithread(config_file):
 
     # 4.3, run through each variable
     for var in vars_sorted:
-        if var == 'lw_rad': 
+        if var == 'lw_rad':
             print(f"{datetime.datetime.now()}: processed {var}")
             continue # 'lw_rad' is always processed together with 'air_temp'
         print(f"{datetime.datetime.now()}: processing {var}")
@@ -484,7 +488,7 @@ def interp_met_nzcsm_multithread(config_file):
 
         if config['input_grid']['dem_file'] == 'none': # load coordinates of each file
             process_input_orogrpahy_no_dem_file(config, var, inp_nc_file, intput_dict)
-        
+
         dataset_dict_vars = {}
         dataset_dict_vars[var] = dataset_dict[var]
         if var == 'air_temp' and 'lw_rad' in config['variables'].keys():
@@ -518,7 +522,7 @@ def interp_met_nzcsm_multithread(config_file):
                         continue
         print(f"{datetime.datetime.now()}: Done")
     out_nc_file.close()
-        
+
 
 if __name__ == '__main__':
     if len(sys.argv) == 2:
